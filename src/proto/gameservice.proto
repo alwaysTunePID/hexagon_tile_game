@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+option objc_class_prefix = "HLW";
+
+package GameService;
+
+// --------------------------
+message ConnectRequest{
+    bool ready = 1;
+}
+
+message ConnectResponse{
+    int32 id = 1;
+}
+
+
+// --------------------------
+message DisconnectRequest{
+}
+
+message DisconnectResponse{
+}
+
+
+// --------------------------
+message StepRequest{
+    int32 action = 1;
+    int32 id = 2;
+}
+
+message StepResponse{
+    int32 nothing = 1;
+}
+
+
+// --------------------------
+message StateRequest{
+    int32 id = 1;
+}
+
+message StateResponse{
+
+    message Tile{
+
+        message TileIdx{
+            int32 r = 1;
+            int32 c = 2;
+        }
+
+        int32 id = 1;
+        TileIdx tileIdx = 2;
+        int32 dir = 3;
+        int32 adjMask = 4;
+        int32 moveIdx = 5;
+        int32 type = 6;
+        bool active = 8;
+        repeated int32 properties = 9;  
+    }
+
+    repeated Tile blocks = 1;
+    int32 state = 2;
+
+    message Player{
+        int32 points = 1;
+        int32 turnTime = 2;
+        int32 textBlock = 3;
+        bool currentPlayer = 4;
+    }
+
+    repeated Player players = 3;
+}
+
+
+// --------------------------
+service GameService{
+    rpc Connect(ConnectRequest) returns (ConnectResponse);
+    rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
+    rpc MakeStep(StepRequest) returns (StepResponse);
+    rpc GetState(StateRequest) returns (StateResponse);
+    //rpc SayHelloStreamReply (HelloRequest) returns (stream HelloReply) {}
+    //rpc SayHelloBidiStream (stream HelloRequest) returns (stream HelloReply) {}
+}

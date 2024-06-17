@@ -38,5 +38,5 @@ resources
 .idea
 .vs
 .vscode
-.PNG
+*.PNG
 CMakeSettings.json
