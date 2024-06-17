@@ -39,4 +39,5 @@ resources
 .vs
 .vscode
 *.PNG
+learnings.md
 CMakeSettings.json
