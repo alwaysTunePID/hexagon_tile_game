@@ -45,7 +45,7 @@ void Game::removeAllPlayers()
 }
 
 
-void Game::update(gameInput input, int playerId)
+void Game::update(gameInput input, int playerId, double dt)
 {
 
     //TODO: Temp hardcoding!
@@ -63,6 +63,8 @@ void Game::update(gameInput input, int playerId)
 
     Player& player{ players[playerId] };
 
+    moveInput zeroVel{ 0.f, 0 };
+
     switch (state)
     {
     case stateType::playerTurn:
@@ -70,34 +72,23 @@ void Game::update(gameInput input, int playerId)
         if (playerId != currentPlayer)
             return;
 
-        if (moveDirection != directionType::none)
+        if (player.isLJoyMode(LJoyMode::move))
         {
             bool moved{ false };
+            moved = tryMove(player, dt);
+            if (moved)
+            {
+                executeProperties(player);
+            }
+            player.setVelocity(input.move);
+        }
 
-            if (player.isLJoyMode(LJoyMode::move))
-            {
-                moved = tryMove(player.getTileIdx(), moveDirection);
-                if (moved)
-                {
-                    actionTaken = true;
-                    executeProperties(player);
-                }
-            }
-            else if (player.isLJoyMode(LJoyMode::aim))
-            {
-                TileIdx fromTile{ player.getAimTileIdx() };
-                TileIdx toTile{ board.getTileInFront(fromTile, moveDirection) };
-                if (!board.isOutOfBounds(toTile))
-                {
-                    std::vector<int> tileIds{ board.getTileIds(toTile) };
-                    for (int tileId : tileIds)
-                    {
-                        tiles[tileId].setHighlighted(true);
-                        tiles[player.getAimTileId()].setHighlighted(false);
-                        player.setAimTile(tiles[tileId]);
-                    }
-                }
-            }
+        if (player.isLJoyMode(LJoyMode::aim))
+        {
+            //TileIdx fromTile{ player.getAimTileIdx() };
+            //TileIdx toTile{ board.getTileInFront(fromTile, moveDirection) };
+            moveAim(player, dt);
+            player.setAimVelocity(input.move);
         }
 
         switch (input.button)
@@ -108,14 +99,14 @@ void Game::update(gameInput input, int playerId)
 
             if (player.isLJoyMode(LJoyMode::aim))
             {
-                std::vector<int> tileIdss{ board.getTileIds(player.getTileIdx()) };
-                for (int tileId : tileIdss)
-                {
-                    player.setAimTile(tiles[tileId]);
-                    break;
-                }
+                int tileId{ board.getTileId(player.getTileIdx()) };
+                player.setAimTile(tiles[tileId]);
+                player.setVelocity(zeroVel);
             }
-
+            else
+            {
+                player.setAimVelocity(zeroVel);
+            }
             break;
 
         case xbox::A:
@@ -245,28 +236,56 @@ void Game::removeAllTiles()
     tiles.clear();
 }
 
-bool Game::tryMove(TileIdx& tileIdx, directionType direction)
+bool Game::tryMove(Player& player, double dt)
 {
-    TileIdx toTile{ board.getTileInFront(tileIdx, direction) };
+    PosInTile pos{ player.getUpdatedPos(dt) };
+    directionType direction{ board.getNewTileDir(pos) };
+
+    if (direction == directionType::none)
+    {
+        player.setPos(pos);
+        return false;
+    }
+
+    TileIdx toTile{ board.getTileInFront(player.getTileIdx(), direction) };
+    if (board.isOutOfBounds(toTile))
+    {
+        return false;
+    }
+    else if (tiles[board.getTileId(toTile)].hasEffect(EffectType::stop))
+    {
+        return false;
+    }
+    else
+    {
+        player.setTileIdx(toTile);
+        player.setPos(pos);
+        return true;
+    }
+}
+
+bool Game::moveAim(Player& player, double dt)
+{
+    PosInTile pos{ player.getUpdatedAimPos(dt) };
+    directionType direction{ board.getNewTileDir(pos) };
+    player.setAimPos(pos);
+
+    if (direction == directionType::none)
+    {
+        return false;
+    }
+
+    TileIdx toTile{ board.getTileInFront(player.getAimTileIdx(), direction) };
     if (board.isOutOfBounds(toTile))
     {
         return false;
     }
 
-    std::vector<int> tileIds{ board.getTileIds(toTile) };
-    bool allMoved {true};
-    for (int tileId : tileIds)
-    {
-        if (tiles[tileId].hasEffect(EffectType::stop))
-        {
-            return false;
-        }
-    }
-    if (allMoved)
-    {
-        tileIdx = toTile;
-    }
-    return allMoved;
+    int toTileId{ board.getTileId(toTile) };
+    tiles[toTileId].setHighlighted(true);
+    tiles[player.getAimTileId()].setHighlighted(false);
+    player.setAimTile(tiles[toTileId]);
+    return true;
 }
 
 void Game::executeProperties(Player& player)
@@ -275,7 +294,7 @@ void Game::executeProperties(Player& player)
     {
         for (effectData effect : tiles[tileId].getProperties())
         {
-            bool moved{};
+            moveInput push{ 1.f , 100 };
             switch (effect.type)
             {
             case EffectType::sink:
@@ -283,9 +302,8 @@ void Game::executeProperties(Player& player)
                 break;
 
             case EffectType::wind:
-                moved = tryMove(player.getTileIdx(), effect.direction);
-                if (moved)
-                    executeProperties(player);
+                // Fix this hardcoded shit!
+                player.setVelocity(push);
                 break;
 
             default:

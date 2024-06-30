@@ -1,5 +1,6 @@
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 #include "Board.h"
 
 Board::Board(int size)
@@ -111,4 +112,90 @@ TileIdx Board::getInitTileIdxFromPlayerId(int id)
         return tileIdx;
     }
     return tileIdx;
+}
+
+directionType Board::getNewTileDir(PosInTile& pos)
+{
+    // Test square first
+    //std::cout << "x: " << pos.first << " y: " << pos.second << std::endl;
+
+    if (std::abs(pos.first) < 12.f && 
+        std::abs(pos.second) < static_cast<float>(SQ_HEIGHT / 2.0))
+    {
+        //std::cout << "x: " << pos.first << " " << pos.second << std::endl;
+        return directionType::none;
+    }
+
+    /*    12    arctan (18/12) = 0,983
+          _ _ 
+        /\  |
+       /  \ | 18
+      /_  _\|
+
+      f(12) = 18 , 18 = k * 12 + m  =>  17 = - k * 12  => k = - 17 / 12 , m = 35 
+      f(24) = 1  , 1  = k * 24 + m
+
+      width diff = SQ_WIDTH * 0.75
+      height diff = SQ_HEIGHT * 0.5
+    */
+
+    float ang1{ 0.983 };
+    float k{ - 17 / 12 };
+    float m{ 35 };
+    float widthDiff{ static_cast<float>(SQ_WIDTH * 0.75) };
+    float heightDiff{ static_cast<float>(SQ_HEIGHT * 0.5) };
+
+    // Handle special case x = 0
+    if (pos.first == 0.f){
+        return (pos.second > 0) ? directionType::down : directionType::up;
+    }
+
+    float angle{ atan2(pos.second, pos.first) };
+    if (angle > 0.f && angle <= ang1)
+    {
+        if (pos.second > k * pos.first + m)
+        {
+            pos.first += -widthDiff;
+            pos.second += -heightDiff;
+            return directionType::downRight;
+        }
+    }
+    else if (angle > ang1 && angle <= PI - ang1)
+    {
+        pos.second += -static_cast<float>(SQ_HEIGHT);
+        return directionType::down;
+    }
+    else if (angle > PI - ang1 && angle <= PI)
+    {
+        if (pos.second > k * -pos.first + m)
+        {
+            pos.first += widthDiff;
+            pos.second += -heightDiff;
+            return directionType::downLeft;
+        }
+    }
+    else if (angle < -PI + ang1 && angle >= -PI)
+    {
+        if (-pos.second > k * -pos.first + m)
+        {
+            pos.first += widthDiff;
+            pos.second += heightDiff;
+            return directionType::upLeft;
+        }
+    }
+    else if (angle < -ang1 && angle >= -PI + ang1)
+    {
+        pos.second += static_cast<float>(SQ_HEIGHT);
+        return directionType::up;
+    }
+    else if (angle < 0 && angle >= -ang1)
+    {
+        if (-pos.second > k * pos.first + m)
+        {
+            pos.first += -widthDiff;
+            pos.second += heightDiff;
+            return directionType::upRight;
+        }
+    }
+    return directionType::none;
 }

@@ -24,7 +24,7 @@ public:
     bool isOutOfBounds(TileIdx tileIdx);
     void removeTile(Tile& tile);
     TileIdx Board::getInitTileIdxFromPlayerId(int id);
-
+    directionType getNewTileDir(PosInTile& pos);
 };
 
 #endif

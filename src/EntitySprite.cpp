@@ -20,8 +20,7 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
     case EntityType::player:
         folder = "Players/";
         name = "Player" + ToString(value);
-        // TODO: This should be directional
-        texturetype = textureType::normal;
+        texturetype = textureType::directional;
         width_ = WIZARD_WIDTH;
         height_ = WIZARD_HEIGHT;
         animationLengths.push_back(3);
@@ -53,9 +52,18 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         folder = "Visuals/";
         name = ToString(visualType);
         texturetype = GetTextureType(visualType);
-        width_ = VISUAL_WIDTH;
-        height_ = VISUAL_HEIGHT;
-        animationLengths.push_back(3);
+        // Ugly hardcoding, bad!
+        if (visualType == VisualType::aim){
+            width_ = 5.f;
+            height_ = 5.f;
+            animationLengths.push_back(3);
+        }
+        else{
+            width_ = VISUAL_WIDTH;
+            height_ = VISUAL_HEIGHT;
+            animationLengths.push_back(3);
+        }
+
         break;
 
     default:
@@ -66,6 +74,7 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
     std::string imagePathier{};
     std::string completePath{};
     sf::Texture texture{};
+    int numDirections{ 1 };
 
     for (int animationLength : animationLengths)
     {
@@ -82,7 +91,10 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         else {
             imagePathier = imagePath + name;
         }
-        for (int j = 0; j < animationLength; j++) {
+        if (texturetype == textureType::directional)
+            numDirections = 4;
+
+        for (int j = 0; j < animationLength * numDirections; j++) {
             completePath = imagePathier + std::to_string(j + 1) + ".png";
             texture.loadFromFile(completePath);
             textures.push_back(texture);
@@ -102,6 +114,28 @@ EntitySprite::~EntitySprite()
 {
 }
 
+int EntitySprite::getTextureIndexDirOffset(directionType dir)
+{
+    // TODO: This is hardcoded with the assumption that the animation is 3 frames
+    switch (dir)
+    {
+    case directionType::up:
+        return 0;
+    case directionType::upLeft:
+        return 3;
+    case directionType::downLeft:
+        return 6;
+    case directionType::down:
+        return 9;
+    case directionType::downRight:
+        return 6;
+    case directionType::upRight:
+        return 3;
+    default:
+        return 0;
+    }
+}
+
 // TODO: This is very much a copy of the function in Tilesprite. How do we solve this???
 sf::Vector2f EntitySprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
 {
@@ -117,6 +151,16 @@ sf::Vector2f EntitySprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
     return {
         static_cast<float>(camera.horizontal + board_width),
         static_cast<float>(camera.vertical + board_height) };
+}
+
+sf::Vector2f EntitySprite::tileIdxAndPosInTileToPos(TileIdx tileIdx, PosInTile& posInTile, displayInput& camera)
+{
+    sf::Vector2f pos{ tileIdxToPos(tileIdx, camera) };
+
+    pos.x += posInTile.first * camera.zoom;
+    pos.y += posInTile.second * camera.zoom;
+
+    return pos;
 }
 
 void EntitySprite::setPos(castedSpellData& spellData, displayInput& camera)
@@ -210,18 +254,26 @@ void EntitySprite::updateFrameIdx()
 }
 
 // TODO: Remove elements from animationDataMap at some point???
-void EntitySprite::updateSprite(int id, TileIdx tileIdx, directionType dir, displayInput& camera)
+void EntitySprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera)
 {
     animationData& animationdata{ getAnimationData(id) };
     // TODO: This will not work when having more than 2 animations
     int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
-    int textureIndex{ offset + animationdata.frameIdx };
+    int dirOffset { getTextureIndexDirOffset(dir) };
+    int textureIndex{ offset + dirOffset + animationdata.frameIdx };
     sprite.setTexture(textures[textureIndex]);
 
     sprite.setOrigin(width_ / 2, height_ / 2);
-    sprite.setPosition(tileIdxToPos(tileIdx, camera));
-    setRot(dir);
-    sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
+
+    if (entityType == EntityType::player)
+        pos.second -= 14.f;
+
+    sprite.setPosition(tileIdxAndPosInTileToPos(tileIdx, pos, camera));
+    // TODO: You must add a way to differentiate between the two directional types.
+    if (entityType != EntityType::player)
+        setRot(dir);
+    int horizontalFlip{ (dir == directionType::downRight || dir == directionType::upRight) ? -1 : 1 };
+    sprite.setScale(sf::Vector2f(horizontalFlip * camera.zoom, camera.zoom));
     pixelSprites.clear();
     pixelAnimationStep = -1;
     drawByPixel = false;

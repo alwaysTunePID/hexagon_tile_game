@@ -35,6 +35,8 @@ const double VISUAL_HEIGHT{ 16 };
 #define PI 3.14159265
 
 typedef std::pair<int, int> TileIdx;
+typedef std::pair<float, float> PosInTile;
+typedef std::pair<float, float> VelInTile;
 
 const TileIdx OOB_TILE{ 300, 300 }; // Out of Bounds
 
@@ -82,6 +84,7 @@ enum class EffectType
 
 enum class VisualType
 {
+    aim,
     aimDir,
     last
 };
@@ -316,6 +319,7 @@ inline std::string ToString(VisualType visual)
 {
     switch (visual)
     {
+        case VisualType::aim:         return "Aim";
         case VisualType::aimDir:      return "Arrow";
         default:      return "[Unknown Visual]";
     }
@@ -468,9 +472,15 @@ enum class LJoyMode
     last
 };
 
+typedef struct moveInput {
+    float angle;
+    int power;
+} moveInput;
+
 typedef struct gameInput {
     xbox button;
     actionType action;
+    moveInput move;
 } gameInput;
 
 typedef struct displayInput {

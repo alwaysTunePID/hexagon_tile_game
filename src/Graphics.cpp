@@ -15,7 +15,7 @@ Graphics::~Graphics()
 {
 }
 
-void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input)
+void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, double dt)
 {
     window.clear();
 
@@ -130,8 +130,7 @@ void Graphics::drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& til
                 }
             }
             else {
-                //TODO: Change this when players have a direction
-                playersprite.updateSprite(player.getId(), player.getTileIdx(), directionType::none, camera);
+                playersprite.updateSprite(player.getId(), player.getTileIdx(), player.getPos(), player.getDir(), camera);
             }
             playersprite.draw(window);
         }
@@ -181,14 +180,19 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
             // Draw aim arrow
             if (player.isLJoyMode(LJoyMode::aim))
             {
+                TileIdx tileIdx{ player.getAimTileIdx() };
+                directionType direction{ player.getSelectedSpellDir() };
+
+                int value1{ static_cast<int>(VisualType::aim) };
+                EntitySprite& entitySprite1{ getEntitySprite(EntityType::visual, value1) };
+                entitySprite1.updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
+                entitySprite1.draw(window);
+
                 if (IsDirectional(player.getSelectedSpell()))
                 {
-                    TileIdx tileIdx{ player.getAimTileIdx() };
-                    directionType direction{ player.getSelectedSpellDir() };
-
                     int value{ static_cast<int>(VisualType::aimDir) };
                     EntitySprite& entitySprite{ getEntitySprite(EntityType::visual, value) };
-                    entitySprite.updateSprite(0, tileIdx, direction, camera);
+                    entitySprite.updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
                     entitySprite.draw(window);
                 }
             }

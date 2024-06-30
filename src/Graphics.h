@@ -24,7 +24,7 @@ public:
     Graphics();
     ~Graphics();
 
-    void update(Game& game, sf::RenderWindow& window, displayInput& zoom);
+    void update(Game& game, sf::RenderWindow& window, displayInput& zoom, double dt);
     void drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& tile);
     void drawPlayerGUI(Game& game, sf::RenderWindow& window);
     void updateCamera(displayInput& input);

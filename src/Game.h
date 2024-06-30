@@ -35,7 +35,7 @@ public:
     void createPlayer();
     void addPlayer(Player player);
     void removeAllPlayers();
-    void update(gameInput input, int playerId);
+    void update(gameInput input, int playerId, double dt);
     std::map<int, Tile>& getTiles();
     Tile& getTile(TileIdx tileIdx);
     std::map<int, Player>& getPlayers();
@@ -44,7 +44,8 @@ public:
     void setEvent(gameEventType event);
     void addTile(Tile tile, TileIdx tileIdx);
     void removeAllTiles();
-    bool tryMove(TileIdx& tileIdx, directionType direction);
+    bool tryMove(Player& player, double dt);
+    bool moveAim(Player& player, double dt);
     void executeProperties(Player& player);
     void killPlayer(Player& player);
     void moveToSpawn(Player& player);

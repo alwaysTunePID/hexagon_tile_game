@@ -42,13 +42,15 @@ public:
     EntitySprite();
     ~EntitySprite();
 
+    int getTextureIndexDirOffset(directionType dir);
     sf::Vector2f tileIdxToPos(TileIdx tileIdx, displayInput& camera);
+    sf::Vector2f tileIdxAndPosInTileToPos(TileIdx tileIdx, PosInTile& posInTile, displayInput& camera);
     void setPos(castedSpellData& spellData, displayInput& camera);
     sf::Vector2f getPixelPos(unsigned int x, unsigned int y, displayInput& camera);
     void setRot(directionType dir);
     void setScale(castedSpellData& spellData, displayInput& camera);
     void updateFrameIdx();
-    void updateSprite(int id, TileIdx tileIdx, directionType dir, displayInput& camera);
+    void updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera);
     void updateSprite(int id, effectData& effect, TileIdx tileIdx, displayInput& camera);
     void updateSprite(castedSpellData& spellData, displayInput& camera);
     void addInstance(int id, animationData animationdata);

@@ -14,10 +14,15 @@ private:
     std::string name;
     int id;
     TileIdx tileIdx;
+    PosInTile pos;
+    VelInTile vel;
+    directionType dir;
     int spawnTileId;
     int deathCounter;
     int aimTileId;
     TileIdx aimTileIdx;
+    PosInTile aimPos;
+    VelInTile aimVel;
     sf::Clock clock;   // <- change this so that server doesn't need SFML
     bool currentPlayer;
     LJoyMode lJoyMode;
@@ -39,8 +44,17 @@ public:
     int getId();
     TileIdx& getTileIdx();
     void setTileIdx(TileIdx tileIdxt);
+    PosInTile& getPos();
+    void setPos(PosInTile posT);
+    PosInTile& getAimPos();
+    void setAimPos(PosInTile posT);
+    directionType getDir();
     int getSpawnTileId();
     void setSpawnTileId(int tileIdt);
+    PosInTile getUpdatedPos(double dt);
+    PosInTile getUpdatedAimPos(double dt);
+    void setVelocity(moveInput& move);
+    void setAimVelocity(moveInput& move);
     bool isCurrentPlayer();
     void setCurrentPlayer(bool isCurrent);
     void updateTurnTime();
