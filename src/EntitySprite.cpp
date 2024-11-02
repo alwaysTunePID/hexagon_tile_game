@@ -58,6 +58,11 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
             height_ = 5.f;
             animationLengths.push_back(3);
         }
+        else if (visualType == VisualType::dot){
+            width_ = 1.f;
+            height_ = 1.f;
+            animationLengths.push_back(1);
+        }
         else{
             width_ = VISUAL_WIDTH;
             height_ = VISUAL_HEIGHT;
@@ -142,11 +147,11 @@ sf::Vector2f EntitySprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
     double spacing{ camera.tileSpacing ? 1.0 : 0.0 };
 
     double board_width{ 
-        static_cast<double>(tileIdx.first) * (SQ_WIDTH + spacing) * camera.zoom  * 0.75 +
-        static_cast<double>(tileIdx.second) * (SQ_WIDTH + spacing) * camera.zoom * 0.75 };
+        static_cast<double>(tileIdx.first) * (8 + spacing) * camera.zoom +
+        static_cast<double>(tileIdx.second) * (40 + spacing) * camera.zoom };
     double board_height{
-        static_cast<double>(tileIdx.first) * (SQ_HEIGHT + spacing) * camera.zoom / 2.0 -
-        static_cast<double>(tileIdx.second) * (SQ_HEIGHT + spacing) * camera.zoom / 2.0 };
+        static_cast<double>(tileIdx.first) * (20 + spacing) * camera.zoom +
+        static_cast<double>(tileIdx.second) * (4 + spacing) * camera.zoom };
 
     return {
         static_cast<float>(camera.horizontal + board_width),
@@ -277,6 +282,47 @@ void EntitySprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directio
     pixelSprites.clear();
     pixelAnimationStep = -1;
     drawByPixel = false;
+}
+
+// TODO: Remove elements from animationDataMap at some point???
+void EntitySprite::updateSprite(int id, worldPos w_pos, directionType dir, displayInput& camera)
+{
+    animationData& animationdata{ getAnimationData(id) };
+    // TODO: This will not work when having more than 2 animations
+    int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
+    int dirOffset { getTextureIndexDirOffset(dir) };
+    int textureIndex{ offset + dirOffset + animationdata.frameIdx };
+    sprite.setTexture(textures[textureIndex]);
+
+    if (entityType == EntityType::player)
+    {
+        sprite.setOrigin(width_ / 2, height_ / 2 + 12);
+    }
+    else
+    {
+        sprite.setOrigin(width_ / 2, height_ / 2);
+    }
+
+    screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
+    sprite.setPosition(s_pos.x, s_pos.y);
+    // TODO: You must add a way to differentiate between the two directional types.
+    if (entityType != EntityType::player)
+        setRot(dir);
+    int horizontalFlip{ (dir == directionType::downRight || dir == directionType::upRight) ? -1 : 1 };
+    sprite.setScale(sf::Vector2f(horizontalFlip * camera.zoom, camera.zoom));
+    pixelSprites.clear();
+    pixelAnimationStep = -1;
+    drawByPixel = false;
+}
+
+void EntitySprite::updateSprite(worldPos w_pos, displayInput& camera)
+{
+    sprite.setTexture(textures[0]);
+    sprite.setOrigin(width_ / 2, height_ / 2);
+
+    screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
+    sprite.setPosition(s_pos.x, s_pos.y);
+    sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
 }
 
 void EntitySprite::updateSprite(int id, effectData& effect, TileIdx tileIdx, displayInput& camera)

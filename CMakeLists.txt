@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(CMakeSFMLProject LANGUAGES CXX)
 
-if(MSVC)
-    add_definitions(-D_WIN32_WINNT=0x600)
-endif()
+#if(MSVC)
+#    add_definitions(-D_WIN32_WINNT=0x600)
+#endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -92,7 +92,7 @@ target_link_libraries(hw_grpc_proto
 #target_compile_features(WizardClient PRIVATE cxx_std_17)
 
 
-add_executable(WizardServer src/main.cpp src/ConfigParser.cpp src/Tile.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/EntitySprite.cpp src/Board.cpp src/Player.cpp)
+add_executable(WizardServer src/main.cpp src/ConfigParser.cpp src/Tile.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/EntitySprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
 target_link_libraries(WizardServer
     hw_grpc_proto
     absl::flags

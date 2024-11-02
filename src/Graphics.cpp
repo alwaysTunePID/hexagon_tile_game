@@ -39,14 +39,14 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
     {
         clock.restart();
 
-        for (auto& [pairShit, entitySprite] : entitySprites)
+        /*for (auto& [pairShit, entitySprite] : entitySprites)
             entitySprite.updateFrameIdx();
 
         for (auto& [tiletype, tilesprite] : tilesprites)
             tilesprite.updateFrameIdx();
         
         for (auto& [tileId, playersprite] : playersprites)
-            playersprite.updateFrameIdx();
+            playersprite.updateFrameIdx();*/
     }
 
     //TODO: FIX THIS HARDCODED 
@@ -73,9 +73,6 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
                     tilesprite.updateSprite(tile, camera);
                     tilesprite.draw(window, tile);
 
-                    // Draw players on tile
-                    drawPlayersOnTile(game, window, tile);
-
                     // Draw effects
                     for (effectData& effect : tile.getProperties())
                     {
@@ -95,6 +92,8 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
         }
     }
 
+    drawPlayers(game, window);
+
     for (castedSpellData& castedSpell : game.getCastedSpells())
     {
         if (castedSpell.spellType == SpellType::teleport) {
@@ -107,6 +106,9 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
             entitySprite.draw(window);
         }
     }
+
+    if (input.showCoordinateSystem)
+        drawCoordinateSystem(window);
 
     drawPlayerGUI(game, window);
 
@@ -130,9 +132,48 @@ void Graphics::drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& til
                 }
             }
             else {
-                playersprite.updateSprite(player.getId(), player.getTileIdx(), player.getPos(), player.getDir(), camera);
+                playersprite.updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
             }
             playersprite.draw(window);
+        }
+    }
+}
+
+void Graphics::drawPlayers(Game& game, sf::RenderWindow& window)
+{
+    for (auto& [id, player] : game.getPlayers())
+    {
+            // Player characters on board
+            EntitySprite& playersprite{ getEntitySprite(EntityType::player, player.getId()) };
+            if (player.isSpellOngoing()) {
+                for (castedSpellData& castedSpell : game.getCastedSpells())
+                {
+                    if (castedSpell.playerId == player.getId())
+                        playersprite.updateSprite(castedSpell, camera);
+                }
+            }
+            else {
+                playersprite.updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
+            }
+            playersprite.draw(window);
+    }
+}
+
+void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
+{
+    worldPos worldPos{ 0, 0, 0 };
+    int value{ static_cast<int>(VisualType::dot) };
+    EntitySprite& dotSprite{ getEntitySprite(EntityType::visual, value) };
+
+    for (int x{-4}; x <= 4; x++)
+    {
+        for (int y{-4}; y <= 4; y++)
+        {
+            worldPos.x = x;
+            worldPos.y = y;
+
+            dotSprite.updateSprite(worldPos, camera);
+            dotSprite.draw(window);
         }
     }
 }

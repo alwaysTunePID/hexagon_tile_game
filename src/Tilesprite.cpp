@@ -11,7 +11,7 @@ Tilesprite::Tilesprite(Tile& tile)
     type = tile.getTileType();
 
     std::string tileStr{ ToString(type) };
-    std::string imagePath{ "../../../resources/textures/" + tileStr + "/"};
+    std::string imagePath{ "../../../resources/textures/Tiles/" + tileStr + "/"};
 
     std::string completePath{};
     sf::Texture texture{};
@@ -24,7 +24,7 @@ Tilesprite::Tilesprite(Tile& tile)
         break;
 
     default:
-        m = 3;
+        m = 1;
         break;
     }
 
@@ -35,6 +35,7 @@ Tilesprite::Tilesprite(Tile& tile)
     }
 
     sprite.setTexture(textures[0]);
+    sprite.setOrigin(TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1); // -1 because of tile thickness 
     sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 
     // Highlight tile
@@ -52,7 +53,7 @@ Tilesprite::~Tilesprite()
 {
 }
 
-void Tilesprite::setPosFromTileIdx(TileIdx tileIdx, displayInput& camera)
+void Tilesprite::setPosFromTileIdxLegacy(TileIdx tileIdx, displayInput& camera)
 {
     double spacing{ camera.tileSpacing ? 1.0 : 0.0 };
 
@@ -72,6 +73,18 @@ void Tilesprite::setPosFromTileIdx(TileIdx tileIdx, displayInput& camera)
     sprite.setPosition({
         static_cast<float>(camera.horizontal + board_width + tile_width),
         static_cast<float>(camera.vertical + board_height + tile_height) });
+
+    highlightSprite.setPosition(sprite.getPosition());
+}
+
+void Tilesprite::setPosFromTileIdx(TileIdx tileIdx, displayInput& camera)
+{
+    screenPos s_pos = WorldToScreenPos(TileIdxToWorldPos(tileIdx), camera);
+    // Temp to lower water
+    if (type == tileType::water)
+        s_pos.y += 1.0 * camera.zoom;
+
+    sprite.setPosition(s_pos.x, s_pos.y);
 
     highlightSprite.setPosition(sprite.getPosition());
 }

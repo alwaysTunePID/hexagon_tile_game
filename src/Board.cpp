@@ -114,11 +114,10 @@ TileIdx Board::getInitTileIdxFromPlayerId(int id)
     return tileIdx;
 }
 
-directionType Board::getNewTileDir(PosInTile& pos)
+directionType Board::getNewTileDir(worldPos& pos)
 {
+    /*
     // Test square first
-    //std::cout << "x: " << pos.first << " y: " << pos.second << std::endl;
-
     if (std::abs(pos.first) < 12.f && 
         std::abs(pos.second) < static_cast<float>(SQ_HEIGHT / 2.0))
     {
@@ -126,18 +125,18 @@ directionType Board::getNewTileDir(PosInTile& pos)
         return directionType::none;
     }
 
-    /*    12    arctan (18/12) = 0,983
-          _ _ 
-        /\  |
-       /  \ | 18
-      /_  _\|
+    //    12    arctan (18/12) = 0,983
+    //      _ _ 
+    //    /\  |
+    //   /  \ | 18
+    //  /_  _\|
 
-      f(12) = 18 , 18 = k * 12 + m  =>  17 = - k * 12  => k = - 17 / 12 , m = 35 
-      f(24) = 1  , 1  = k * 24 + m
+    //  f(12) = 18 , 18 = k * 12 + m  =>  17 = - k * 12  => k = - 17 / 12 , m = 35 
+    //  f(24) = 1  , 1  = k * 24 + m
 
-      width diff = SQ_WIDTH * 0.75
-      height diff = SQ_HEIGHT * 0.5
-    */
+    //  width diff = SQ_WIDTH * 0.75
+    //  height diff = SQ_HEIGHT * 0.5
+    
 
     float ang1{ 0.983 };
     float k{ - 17 / 12 };
@@ -196,6 +195,6 @@ directionType Board::getNewTileDir(PosInTile& pos)
             pos.second += heightDiff;
             return directionType::upRight;
         }
-    }
+    }*/
     return directionType::none;
 }

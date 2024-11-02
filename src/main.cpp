@@ -19,6 +19,7 @@ int main()
     std::string configPath{ "../../../config.txt" };
 
     bool enableDebugPrint{ false };
+    bool showCoordinateSystem{ false };
 
     auto window = sf::RenderWindow { {WIDTH, HEIGHT}, "Some Game" };
     window.setFramerateLimit(144);
@@ -36,8 +37,8 @@ int main()
     actionType begunAction{ actionType::none };
     int tileSpacingIgnoreCounter{ 0 };
 
-    std::chrono::time_point<std::chrono::system_clock> startTime{ std::chrono::system_clock::now() };
-    std::chrono::time_point<std::chrono::system_clock> endTime{};
+    timePoint startTime{ Time::now() };
+    timePoint endTime{};
 
     while (window.isOpen())
     {
@@ -131,6 +132,19 @@ int main()
             {
                 std::cout << "Pressed P " << std::endl;
             }
+            else if ((event.type == sf::Event::KeyReleased) && (event.key.code == sf::Keyboard::C))
+            {
+                if (showCoordinateSystem)
+                {
+                    showCoordinateSystem = false;
+                    std::cout << "Hide Coordinate System" << std::endl;
+                }
+                else
+                {
+                    std::cout << "Show Coordinate System" << std::endl;
+                    showCoordinateSystem = true;
+                }
+            }
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
             {
                 configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
@@ -191,10 +205,10 @@ int main()
                         << posX << " " << posY << " " << posZ << " "
                         << posR << " " << posU << " " << posV << std::endl;
         }
-        
-        int power{ static_cast<int>(std::sqrt(std::pow(posX, 2) + std::pow(posY, 2))) };
-        if (power > static_cast<int>(joyThreshLow)){
-            input.move.power = power;
+
+        double power{ std::sqrt(std::pow(posX, 2) + std::pow(posY, 2)) };
+        if (power > joyThreshLow){
+            input.move.power = power / 200.0;
             input.move.angle = atan2(posY, posX);
         }
         else{
@@ -213,11 +227,13 @@ int main()
             dispInput.zoom = posZ;
         }
 
+        dispInput.showCoordinateSystem = showCoordinateSystem;
+
         if (tileSpacingIgnoreCounter > 0)
             tileSpacingIgnoreCounter -= 1;
 
-        endTime = std::chrono::system_clock::now();
-        std::chrono::duration<double> timePast{ endTime - startTime };
+        endTime = Time::now();
+        timeDuration timePast{ endTime - startTime };
         double dt{ timePast.count() };
         startTime = endTime;
 

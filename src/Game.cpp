@@ -8,8 +8,8 @@
 #include "Board.h"
 
 Game::Game(unsigned seed)
-    : tileId{ 0 }, players{}, boardSize { 8 }, board{ boardSize },
-      state { stateType::lobby }, seed{seed}
+    : tileId{ 0 }, effectId { 0 }, players{}, effects{}, boardSize { 8 }, board{ boardSize },
+      state { stateType::lobby }, seed{seed}, updateCounter{}
 {
     castedSpellData castedSpell{};
     currentPlayer = 0;
@@ -47,7 +47,7 @@ void Game::removeAllPlayers()
 
 void Game::update(gameInput input, int playerId, double dt)
 {
-
+    updateCounter++;
     //TODO: Temp hardcoding!
     playerId = currentPlayer;
     bool printCurrentRules {false};
@@ -167,6 +167,13 @@ void Game::update(gameInput input, int playerId, double dt)
             player.updateTurnTime();
         }
 
+        // Debug stuff
+        /*
+        if (updateCounter % 20u == 0)
+        {
+            TileIdx playerTileIdx{ WorldPosToTileIdx(player.getWorldPos()) };
+            std::cout << "playerTileIdx: " << playerTileIdx.first << " " << playerTileIdx.second << std::endl;
+        }*/
         break;
 
     case stateType::lobby:
@@ -238,37 +245,38 @@ void Game::removeAllTiles()
 
 bool Game::tryMove(Player& player, double dt)
 {
-    PosInTile pos{ player.getUpdatedPos(dt) };
-    directionType direction{ board.getNewTileDir(pos) };
+    worldPos pos{ player.getUpdatedPos(dt) };
+    TileIdx newTileIdx{ WorldPosToTileIdx(pos) };
 
-    if (direction == directionType::none)
+    if (newTileIdx == player.getTileIdx())
     {
-        player.setPos(pos);
+        player.setWorldPos(pos);
         return false;
     }
 
-    TileIdx toTile{ board.getTileInFront(player.getTileIdx(), direction) };
-    if (board.isOutOfBounds(toTile))
+    else if (board.isOutOfBounds(newTileIdx))
     {
         return false;
     }
-    else if (tiles[board.getTileId(toTile)].hasEffect(EffectType::stop))
+    else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
     {
         return false;
     }
     else
     {
-        player.setTileIdx(toTile);
-        player.setPos(pos);
+        player.setTileIdx(newTileIdx);
+        player.setWorldPos(pos);
         return true;
     }
 }
 
 bool Game::moveAim(Player& player, double dt)
 {
-    PosInTile pos{ player.getUpdatedAimPos(dt) };
+    //PosInTile pos{ player.getUpdatedAimPos(dt) };
+    // Temp to be able to compile
+    worldPos pos{ player.getUpdatedPos(dt) };
     directionType direction{ board.getNewTileDir(pos) };
-    player.setAimPos(pos);
+    //player.setAimPos(pos);
 
     if (direction == directionType::none)
     {
@@ -380,7 +388,7 @@ void Game::castSpell()
     }
     else
     {
-        std::chrono::time_point<std::chrono::system_clock> startTime{ std::chrono::system_clock::now() };
+        timePoint startTime{ Time::now() };
         castedSpell.startTime = startTime;
         castedSpell.traveledPerc = 0.0;
         castedSpells.push_back(castedSpell);
@@ -389,10 +397,10 @@ void Game::castSpell()
 
 void Game::updateCastedSpells()
 {
-    std::chrono::time_point<std::chrono::system_clock> endTime{ std::chrono::system_clock::now() };
+    timePoint endTime{ Time::now() };
     for (castedSpellData& castedSpell : castedSpells)
     {
-        std::chrono::duration<double> timePast{ endTime - castedSpell.startTime };
+        timeDuration timePast{ endTime - castedSpell.startTime };
         // TODO: Fix this incorrect definition of speed
         castedSpell.traveledPerc = timePast.count() * 100.0 / GetSpeed(castedSpell.spellType);
         // TODO: Check if traveledPerc is done and if so perform its effect
@@ -501,6 +509,13 @@ int Game::getNewTileId()
     return returnId;
 }
 
+uint16_t Game::getNewEffectId()
+{
+    uint16_t returnId = effectId;
+    effectId++;
+    return returnId;
+}
+
 void Game::generateLevel()
 {
     std::array<int, 3> OBJECT_PROB{ 60, 30, 10 };
@@ -552,4 +567,10 @@ void Game::setPlayersSpawnTiles()
         int tileId{ board.getTileId(board.getInitTileIdxFromPlayerId(id)) };
         player.setSpawnTileId(tileId);
     }
+}
+
+void Game::addEffect()
+{
+    uint16_t id{ getNewEffectId() };
+    //Fire(id, )
 }

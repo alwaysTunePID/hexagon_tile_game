@@ -16,6 +16,8 @@ private:
     TileIdx tileIdx;
     PosInTile pos;
     VelInTile vel;
+    worldPos w_pos;
+    worldVel w_vel;
     directionType dir;
     int spawnTileId;
     int deathCounter;
@@ -46,12 +48,14 @@ public:
     void setTileIdx(TileIdx tileIdxt);
     PosInTile& getPos();
     void setPos(PosInTile posT);
+    worldPos getWorldPos();
+    void setWorldPos(worldPos posT);
     PosInTile& getAimPos();
     void setAimPos(PosInTile posT);
     directionType getDir();
     int getSpawnTileId();
     void setSpawnTileId(int tileIdt);
-    PosInTile getUpdatedPos(double dt);
+    worldPos getUpdatedPos(double dt);
     PosInTile getUpdatedAimPos(double dt);
     void setVelocity(moveInput& move);
     void setAimVelocity(moveInput& move);

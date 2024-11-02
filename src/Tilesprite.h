@@ -22,6 +22,7 @@ public:
     Tilesprite();
     ~Tilesprite();
 
+    void setPosFromTileIdxLegacy(TileIdx tileIdx, displayInput& camera);
     void setPosFromTileIdx(TileIdx tileIdx, displayInput& camera);
     void updateFrameIdx();
     void updateSprite(Tile& tile, displayInput& camera);

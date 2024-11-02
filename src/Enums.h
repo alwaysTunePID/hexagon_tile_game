@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <array>
 #include <chrono>
+#include <math.h>
 #include <string>
 #include <utility>
 
@@ -12,8 +13,18 @@
 
 #define INIT_SCALE 2
 
+#define WIDTH2 1920
+#define HEIGHT2 1080
+
+#define TURN_TIME 90
+
+#define PI 3.14159265
+
 const double SQ_WIDTH{ 48 };
 const double SQ_HEIGHT{ 36 };
+
+const double TILE_WIDTH{ 48 };
+const double TILE_HEIGHT{ 27 };
 
 const double WIZARD_WIDTH{ 16 };
 const double WIZARD_HEIGHT{ 32 };
@@ -27,16 +38,40 @@ const double EFFECT_HEIGHT{ 48 };
 const double VISUAL_WIDTH{ 16 };
 const double VISUAL_HEIGHT{ 16 };
 
-#define WIDTH2 1920
-#define HEIGHT2 1080
-
-#define TURN_TIME 90
-
-#define PI 3.14159265
+constexpr double FIRE_SPREAD_TIME { 1.0 };
 
 typedef std::pair<int, int> TileIdx;
 typedef std::pair<float, float> PosInTile;
 typedef std::pair<float, float> VelInTile;
+
+typedef std::pair<float, float> VelInTile;
+
+typedef struct screenPos {
+    float x;
+    float y;
+} screenPos;
+
+typedef struct worldPos {
+    double x;
+    double y;
+    double z;
+} worldPos;
+
+typedef struct worldVel {
+    double x;
+    double y;
+    double z;
+} worldVel;
+
+typedef struct worldAcc {
+    double x;
+    double y;
+    double z;
+} worldAcc;
+
+typedef std::chrono::system_clock Time;
+typedef std::chrono::time_point<Time> timePoint;
+typedef std::chrono::duration<double> timeDuration;
 
 const TileIdx OOB_TILE{ 300, 300 }; // Out of Bounds
 
@@ -82,10 +117,18 @@ enum class EffectType
     last
 };
 
+enum class StaticObjectType
+{
+    tree,
+    mountain,
+    last
+};
+
 enum class VisualType
 {
     aim,
     aimDir,
+    dot,
     last
 };
 
@@ -107,6 +150,15 @@ enum class directionType
     down,
     downRight,
     upRight,
+    none
+};
+
+enum class burnType 
+{   beginBurning,
+    burning,
+    endBurning,
+    burnt,
+    normal,
     none
 };
 
@@ -244,6 +296,19 @@ inline bool HasTexture(EffectType effect)
     }
 }
 
+inline std::pair<uint16_t, uint16_t> GetSize(StaticObjectType staticObject)
+{
+    switch (staticObject)
+    {
+        case StaticObjectType::tree:
+            return {16, 60};
+        case StaticObjectType::mountain:
+            return {60, 60};
+        default:
+            return {1, 1};
+    }
+}
+
 inline bool IsDirectional(SpellType spell)
 {
     switch (spell)
@@ -321,6 +386,7 @@ inline std::string ToString(VisualType visual)
     {
         case VisualType::aim:         return "Aim";
         case VisualType::aimDir:      return "Arrow";
+        case VisualType::dot:         return "Dot";
         default:      return "[Unknown Visual]";
     }
 }
@@ -488,6 +554,65 @@ typedef struct displayInput {
     float horizontal; 
     float vertical;
     bool tileSpacing;
+    bool showCoordinateSystem;
 } displayInput;
+
+
+// TODO: This should be moved to it's own file
+inline worldVel InputToWorldVel(moveInput moveInput)
+{
+    worldVel w_vel;
+    double screen_x = moveInput.power * std::cos(-moveInput.angle);
+    double neg_screen_y = moveInput.power * std::sin(-moveInput.angle);
+
+    w_vel.x = screen_x - neg_screen_y;
+    w_vel.y = screen_x + neg_screen_y;
+    w_vel.z = 0;
+
+    return w_vel;
+}
+
+// TODO: This should be moved to it's own file
+inline worldPos TileIdxToWorldPos(TileIdx tileIdx)
+{
+    worldPos w_pos;
+
+    w_pos.x = static_cast<double>(tileIdx.first) + 
+              static_cast<double>(tileIdx.second);
+    w_pos.y = - static_cast<double>(tileIdx.first) * 0.5
+              + static_cast<double>(tileIdx.second) * 0.5;
+
+    w_pos.z = 0;
+
+    return w_pos;
+}
+
+// Inverse of TileIdxToWorldPos
+inline TileIdx WorldPosToTileIdx(worldPos w_pos)
+{
+    TileIdx tileIdx;
+
+    double r{ w_pos.x * 0.5 - w_pos.y };
+    double c{ w_pos.x * 0.5 + w_pos.y };
+     
+    tileIdx = {static_cast<int>(round(r)),
+               static_cast<int>(round(c))};
+
+    return tileIdx;
+}
+
+inline screenPos WorldToScreenPos(worldPos worldPos, displayInput& camera)
+{
+    screenPos s_pos;
+
+    s_pos.x = static_cast<float>(
+                camera.horizontal +
+                (worldPos.x * 24.0  + worldPos.y * 32.0) * camera.zoom);
+    s_pos.y = static_cast<float>(
+                camera.vertical +
+                (worldPos.x * 12.0  - worldPos.y * 16.0 - worldPos.z * 16.0) * camera.zoom); 
+    
+    return s_pos;
+}
 
 #endif

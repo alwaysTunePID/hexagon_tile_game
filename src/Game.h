@@ -9,15 +9,18 @@
 #include "Tile.h"
 #include "Board.h"
 #include "Player.h"
+#include "Fire.h"
 
 class Game
 {
 private:
     std::map<int, Tile> tiles;
     int tileId;
+    uint16_t effectId;
     std::vector<std::pair<std::map<int, Tile>,Board>> blockHistory;
     int currentPlayer;
     std::map<int, Player> players;
+    std::map<int, Fire> effects;
     stateType state;
     gameEventType event{gameEventType::none};
     int boardSize;
@@ -27,6 +30,7 @@ private:
     unsigned seed;
     std::default_random_engine generator;
     std::vector<castedSpellData> castedSpells;
+    uint64_t updateCounter;
 
 public:
     Game(unsigned seed);
@@ -65,9 +69,11 @@ public:
     //void storeState();
     bool isOutOfBounds(TileIdx tileIdx);
     int getNewTileId();
+    uint16_t getNewEffectId();
     void generateLevel();
     bool isASpawnTile(TileIdx tileIdx);
     void setPlayersSpawnTiles();
+    void addEffect();
 };
 
 #endif

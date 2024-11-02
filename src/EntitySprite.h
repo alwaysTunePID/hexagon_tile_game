@@ -51,6 +51,8 @@ public:
     void setScale(castedSpellData& spellData, displayInput& camera);
     void updateFrameIdx();
     void updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera);
+    void updateSprite(int id, worldPos w_pos, directionType dir, displayInput& camera); // New, with worldPos
+    void updateSprite(worldPos w_pos, displayInput& camera);
     void updateSprite(int id, effectData& effect, TileIdx tileIdx, displayInput& camera);
     void updateSprite(castedSpellData& spellData, displayInput& camera);
     void addInstance(int id, animationData animationdata);

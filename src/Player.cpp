@@ -9,7 +9,8 @@ Player::Player()
 
 Player::Player(int id, TileIdx tileIdx)
     : points{ 0 }, turnTime{ 40 }, name{ "Bob" }, 
-      id{ id }, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
+      id{ id }, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
+      w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
       deathCounter{ 0 }, aimTileId{ 0 }, aimTileIdx{}, aimPos{0.f, 0.f}, aimVel{0.f, 0.f}, 
       clock{}, currentPlayer{ false }, lJoyMode{ LJoyMode::move },
       spellOngoing{ false }, selectedSpellIdx{ 0 },
@@ -20,6 +21,8 @@ Player::Player(int id, TileIdx tileIdx)
     selectionSpells.push_back(SpellType::fireball);
     selectionSpells.push_back(SpellType::wind);
     selectionSpells.push_back(SpellType::teleport);
+
+    std::cout << "World pos player " << id << ":" << w_pos.x << " " << w_pos.y << std::endl; 
 }
 
 Player::Player(int points, int turnTime, int id, bool currentPlayer)
@@ -73,6 +76,16 @@ void Player::setPos(PosInTile posT)
     pos = posT;
 }
 
+worldPos Player::getWorldPos()
+{
+    return w_pos;
+}
+
+void Player::setWorldPos(worldPos posT)
+{
+    w_pos = posT;
+}
+
 PosInTile& Player::getAimPos()
 {
     return aimPos;
@@ -98,11 +111,12 @@ void Player::setSpawnTileId(int tileIdt)
     spawnTileId = tileIdt;
 }
 
-PosInTile Player::getUpdatedPos(double dt)
+worldPos Player::getUpdatedPos(double dt)
 {
-    PosInTile updatedPos{
-        pos.first + vel.first * static_cast<float>(dt),
-        pos.second + vel.second * static_cast<float>(dt)
+    worldPos updatedPos{
+        w_pos.x + w_vel.x * dt,
+        w_pos.y + w_vel.y * dt,
+        w_pos.z + w_vel.z * dt
     };
     return updatedPos;
 }
@@ -118,8 +132,7 @@ PosInTile Player::getUpdatedAimPos(double dt)
 
 void Player::setVelocity(moveInput& move)
 {
-    vel.first = static_cast<float>(move.power) * std::cos(move.angle);
-    vel.second = static_cast<float>(move.power) * std::sin(move.angle);
+    w_vel = InputToWorldVel(move);
 
     // TODO: Similar code in Board.cpp, move this!
     float ang1{ 0.983 };
@@ -153,8 +166,8 @@ void Player::setVelocity(moveInput& move)
 
 void Player::setAimVelocity(moveInput& move)
 {
-    aimVel.first = static_cast<float>(move.power) * std::cos(move.angle);
-    aimVel.second = static_cast<float>(move.power) * std::sin(move.angle);
+    aimVel.first = move.power * std::cos(move.angle);
+    aimVel.second = move.power * std::sin(move.angle);
 }
 
 bool Player::isCurrentPlayer()

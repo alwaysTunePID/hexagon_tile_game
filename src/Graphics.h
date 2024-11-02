@@ -26,6 +26,8 @@ public:
 
     void update(Game& game, sf::RenderWindow& window, displayInput& zoom, double dt);
     void drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& tile);
+    void drawPlayers(Game& game, sf::RenderWindow& window);
+    void drawCoordinateSystem(sf::RenderWindow& window);
     void drawPlayerGUI(Game& game, sf::RenderWindow& window);
     void updateCamera(displayInput& input);
     void drawInventory(Player& player, sf::RenderWindow& window);
