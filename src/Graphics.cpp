@@ -5,19 +5,36 @@
 #include "Graphics.h"
 
 Graphics::Graphics()
-    : clock{}, entitySprites{}, tilesprites{}, playersprites{},
-      font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }
+    : clock{}, worldObjectSprites{}, entitySprites{}, tilesprites{},
+      font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{}, m_tileSurface{}, m_initTime{ Time::now() },
+      m_timePastForShader{}, m_globalLightVec{}
 {
+    if (!m_reflectionSurface.create(WIDTH2, HEIGHT2))
+        std::cout << "ERROR: Couldn't create reflectionSurface" << std::endl;
+    if (!m_tileSurface.create(TILE_WIDTH, TILE_HEIGHT))
+        std::cout << "ERROR: Couldn't create tileSurface" << std::endl;
+    //m_reflectionSurface.setSmooth(true); // Should it be smoothed?
+
     font.loadFromFile("../../../resources/fonts/PixCon.ttf");
+
+    if (!sf::Shader::isAvailable())
+    {
+        std::cout << "ERROR: Shader not available" << std::endl;
+    }
 }
 
 Graphics::~Graphics()
 {
+    for (auto& [key, tilesprite_p] : tilesprites)
+        delete tilesprite_p;
+    for (auto& [key, worldObjectSprite_p] : worldObjectSprites)
+        delete worldObjectSprite_p;
 }
 
 void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, double dt)
 {
     window.clear();
+    m_reflectionSurface.clear({245, 222, 179, 255}); // sand color
 
     sf::RectangleShape background(sf::Vector2f(WIDTH2, HEIGHT2));
     sf::Color backgroundColor{ 21, 24, 31 };
@@ -25,6 +42,13 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
     window.draw(background);
 
     updateCamera(input);
+
+    // TODO: Change this to sfml clock?
+    timePoint currentTime{ Time::now() };
+    timeDuration timePast{ currentTime - m_initTime };
+    m_timePastForShader = static_cast<float>(timePast.count());
+
+    updateGlobalLightVec2(timePast.count());
 
     /*sf::RectangleShape board(sf::Vector2f(COLUMNS * SQ_WIDTH, ROWS * SQ_WIDTH));
     board.setPosition({
@@ -43,12 +67,46 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
             entitySprite.updateFrameIdx();
 
         for (auto& [tiletype, tilesprite] : tilesprites)
-            tilesprite.updateFrameIdx();
-        
-        for (auto& [tileId, playersprite] : playersprites)
-            playersprite.updateFrameIdx();*/
+            tilesprite.updateFrameIdx();*/
     }
 
+    drawReflections(game);
+    m_reflectionSurface.display();
+
+    sf::Sprite reflectionSprite{ m_reflectionSurface.getTexture() };
+
+    drawTiles(game, window, reflectionSprite);
+
+    drawWorldObjects(game, window);
+    
+    //drawPlayers(game, window);
+
+    for (castedSpellData& castedSpell : game.getCastedSpells())
+    {
+        if (castedSpell.spellType == SpellType::teleport) {
+            continue;
+        }
+        else {
+            int value{ static_cast<int>(castedSpell.spellType) };
+            EntitySprite* entitySprite_p{ getEntitySprite(EntityType::spell, value) };
+            entitySprite_p->updateSprite(castedSpell, camera);
+            entitySprite_p->draw(window);
+        }
+    }
+
+    //window.draw(sf::Sprite(m_reflectionSurface.getTexture()));
+
+    if (input.showCoordinateSystem)
+        drawCoordinateSystem(window);
+
+    drawPlayerGUI(game, window);
+
+    window.display();
+}
+
+void Graphics::drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& reflectionSprite)
+{
+    bool isFirstWaterTile{ true };
     //TODO: FIX THIS HARDCODED 
     int boardSize = 8;
 
@@ -69,11 +127,25 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
             {
                 if (tile.getTileIdx().first == r && tile.getTileIdx().second == c)
                 {
-                    Tilesprite& tilesprite{ getTilesprite(tile) };
-                    tilesprite.updateSprite(tile, camera);
-                    tilesprite.draw(window, tile);
+                    Tilesprite* tilesprite_p{ getTilesprite(tile) };
+                    if (tile.getTileType() == tileType::water)
+                    {
+                        if (isFirstWaterTile)
+                        {
+                            tilesprite_p->updateWaterSurfaceTexture(tile, camera);
+                            isFirstWaterTile = false;
+                        }
+                        tilesprite_p->updateAndDraw(window, tile, camera, reflectionSprite, m_tileSurface, m_timePastForShader);
+                    }
+                    else
+                    {
+                        tilesprite_p->updateSprite(tile, camera);
+                        tilesprite_p->draw(window, tile);
+                    }
+                    
 
                     // Draw effects
+                    /*
                     for (effectData& effect : tile.getProperties())
                     {
                         if (HasTexture(effect.type))
@@ -86,33 +158,11 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
                         // Is this really the way to do it?
                         if (effect.type == EffectType::spawn)
                             effect.active = false;
-                    }
+                    }*/
                 }
             }
         }
     }
-
-    drawPlayers(game, window);
-
-    for (castedSpellData& castedSpell : game.getCastedSpells())
-    {
-        if (castedSpell.spellType == SpellType::teleport) {
-            continue;
-        }
-        else {
-            int value{ static_cast<int>(castedSpell.spellType) };
-            EntitySprite& entitySprite{ getEntitySprite(EntityType::spell, value) };
-            entitySprite.updateSprite(castedSpell, camera);
-            entitySprite.draw(window);
-        }
-    }
-
-    if (input.showCoordinateSystem)
-        drawCoordinateSystem(window);
-
-    drawPlayerGUI(game, window);
-
-    window.display();
 }
 
 
@@ -123,19 +173,77 @@ void Graphics::drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& til
         if (player.getTileIdx() == tile.getTileIdx())
         {
             // Player characters on board
-            EntitySprite& playersprite{ getEntitySprite(EntityType::player, player.getId()) };
+            EntitySprite* playersprite_p{ getEntitySprite(EntityType::player, player.getId()) };
             if (player.isSpellOngoing()) {
                 for (castedSpellData& castedSpell : game.getCastedSpells())
                 {
                     if (castedSpell.playerId == player.getId())
-                        playersprite.updateSprite(castedSpell, camera);
+                        playersprite_p->updateSprite(castedSpell, camera);
                 }
             }
             else {
-                playersprite.updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
+                playersprite_p->updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
             }
-            playersprite.draw(window);
+            playersprite_p->draw(window);
         }
+    }
+}
+
+// TODO: Optimize this sorting shit
+void Graphics::sortWorldObjects(Game& game, std::vector<WorldObject>& worldObjects)
+{
+    for (auto& [id, worldObject] : game.getWorldObjects())
+    {
+        //TileIdx tileIdx{ WorldPosToTileIdx(worldObject.getPos()) };
+        //std::cout << "id: " << worldObject.getId() << " tileIdx: " << tileIdx.first << " " << tileIdx.second << std::endl;
+        worldObjects.push_back(worldObject);
+    }
+
+    displayInput camera_cpy{ camera };
+    // TODO: Don't think this lambda is correct when introducing z coordinate
+    // defining custom comparator as lambda expression
+    auto comp = [camera_cpy] (WorldObject a, WorldObject b)
+    {
+        screenPos s_pos_a{ WorldToScreenPos(a.getPos(), camera_cpy) };
+        screenPos s_pos_b{ WorldToScreenPos(b.getPos(), camera_cpy) };
+        
+        return s_pos_a.y < s_pos_b.y;
+    };
+
+    std::sort(worldObjects.begin(), worldObjects.end(), comp);
+}
+
+void Graphics::drawWorldObjects(Game& game, sf::RenderWindow& window)
+{
+    std::vector<WorldObject> worldObjects;
+    sortWorldObjects(game, worldObjects);
+    bool reflected{ false };
+
+    for (WorldObject& worldObject : worldObjects)
+    {
+        //TileIdx tileIdx{ WorldPosToTileIdx(worldObject.getPos()) };
+        //std::cout << "id: " << worldObject.getId() << " tileIdx: " << tileIdx.first << " " << tileIdx.second << std::endl;
+        EntitySprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
+        worldObjectSprite_p->draw(window);
+    }
+}
+
+
+void Graphics::drawReflections(Game& game)
+{
+    std::vector<WorldObject> worldObjects;
+    sortWorldObjects(game, worldObjects);
+    bool reflected{ true };
+
+    // Draw objects in reflected perspective
+    for (WorldObject& worldObject : worldObjects)
+    {
+        //TileIdx tileIdx{ WorldPosToTileIdx(worldObject.getPos()) };
+        //std::cout << "id: " << worldObject.getId() << " tileIdx: " << tileIdx.first << " " << tileIdx.second << std::endl;
+        EntitySprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
+        worldObjectSprite_p->draw(m_reflectionSurface);
     }
 }
 
@@ -144,38 +252,62 @@ void Graphics::drawPlayers(Game& game, sf::RenderWindow& window)
     for (auto& [id, player] : game.getPlayers())
     {
             // Player characters on board
-            EntitySprite& playersprite{ getEntitySprite(EntityType::player, player.getId()) };
+            EntitySprite* playersprite_p{ getEntitySprite(EntityType::player, player.getId()) };
             if (player.isSpellOngoing()) {
                 for (castedSpellData& castedSpell : game.getCastedSpells())
                 {
                     if (castedSpell.playerId == player.getId())
-                        playersprite.updateSprite(castedSpell, camera);
+                        playersprite_p->updateSprite(castedSpell, camera);
                 }
             }
             else {
-                playersprite.updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
+                playersprite_p->updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
             }
-            playersprite.draw(window);
+            playersprite_p->draw(window);
     }
 }
 
 void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
 {
-    worldPos worldPos{ 0, 0, 0 };
+    worldPos unitWorldPos{ 0, 0, 0 };
     int value{ static_cast<int>(VisualType::dot) };
-    EntitySprite& dotSprite{ getEntitySprite(EntityType::visual, value) };
+    EntitySprite* dotSprite_p{ getEntitySprite(EntityType::visual, value) };
 
     for (int x{-4}; x <= 4; x++)
     {
         for (int y{-4}; y <= 4; y++)
         {
-            worldPos.x = x;
-            worldPos.y = y;
+            unitWorldPos.x = x;
+            unitWorldPos.y = y;
 
-            dotSprite.updateSprite(worldPos, camera);
-            dotSprite.draw(window);
+            dotSprite_p->updateSprite(unitWorldPos, camera);
+            dotSprite_p->draw(window);
         }
     }
+
+    // TODO: Move this to Enum.h and then to its own helper file
+    // 1   / tan (60) = 0.57735;
+    // 0.5 * tan (30) = 0.28868;
+    double a{ 0.57735 };
+    double b{ 0.28868 };
+
+    worldPos vertex0{ a,    0, 0}; // x, y, z
+    worldPos vertex1{ b, -0.5, 0};
+    worldPos vertex2{-b, -0.5, 0};
+    worldPos vertex3{-a,    0, 0};
+    worldPos vertex4{-b,  0.5, 0};
+    worldPos vertex5{ b,  0.5, 0};
+
+    std::vector<worldPos> boundVertices{ vertex0, vertex1, vertex2, vertex3, vertex4, vertex5 };
+    for (worldPos& boundVertex : boundVertices)
+    {
+        dotSprite_p->updateSprite(boundVertex, camera);
+        dotSprite_p->draw(window);
+    }
+
+    // TODO: Shouldn't be here
+    std::cout << "Global light: " << m_globalLightVec.x << ", " << m_globalLightVec.y << ", " << m_globalLightVec.z << std::endl; 
+
 }
 
 void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
@@ -225,16 +357,16 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
                 directionType direction{ player.getSelectedSpellDir() };
 
                 int value1{ static_cast<int>(VisualType::aim) };
-                EntitySprite& entitySprite1{ getEntitySprite(EntityType::visual, value1) };
-                entitySprite1.updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
-                entitySprite1.draw(window);
+                EntitySprite* entitySprite1_p{ getEntitySprite(EntityType::visual, value1) };
+                entitySprite1_p->updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
+                entitySprite1_p->draw(window);
 
                 if (IsDirectional(player.getSelectedSpell()))
                 {
                     int value{ static_cast<int>(VisualType::aimDir) };
-                    EntitySprite& entitySprite{ getEntitySprite(EntityType::visual, value) };
-                    entitySprite.updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
-                    entitySprite.draw(window);
+                    EntitySprite* entitySprite_p{ getEntitySprite(EntityType::visual, value) };
+                    entitySprite_p->updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
+                    entitySprite_p->draw(window);
                 }
             }
             drawInventory(player, window);
@@ -271,6 +403,8 @@ void Graphics::updateCamera(displayInput& input)
             camera.vertical = 0.0;
     }
 
+    camera.enableShaders = input.enableShaders;
+
     // Toggle tile spacing
     camera.tileSpacing = (input.tileSpacing) ? !camera.tileSpacing : camera.tileSpacing;
 }
@@ -303,21 +437,77 @@ void Graphics::drawInventory(Player& player, sf::RenderWindow& window)
     }
 }
 
-EntitySprite& Graphics::getEntitySprite(EntityType entitytype, int value)
+EntitySprite* Graphics::getWorldObjectSprite(WorldObjectType objectType, int value)
+{
+    std::pair<WorldObjectType, int> key{ objectType, value };
+    if (worldObjectSprites.find(key) == worldObjectSprites.end()) {
+        // Couldn't find sprite so add it
+        worldObjectSprites.insert({ key, new EntitySprite(objectType, value) });
+    }
+    return worldObjectSprites[key];
+}
+
+
+EntitySprite* Graphics::getEntitySprite(EntityType entitytype, int value)
 {
     std::pair<EntityType, int> key{ entitytype, value };
     if (entitySprites.find(key) == entitySprites.end()) {
         // Couldn't find sprite so add it
-        entitySprites.insert({ key, EntitySprite(entitytype, value) });
+        entitySprites.insert({ key, new EntitySprite(entitytype, value) });
     }
     return entitySprites[key];
 }
 
-Tilesprite& Graphics::getTilesprite(Tile& tile)
+// For some reason I couldn't get this to build if I didn't make it a pointer to the Tilesprite
+Tilesprite* Graphics::getTilesprite(Tile& tile)
 {
     if (tilesprites.find(tile.getTileType()) == tilesprites.end()) {
         // Couldn't find sprite so add it
-        tilesprites.insert({tile.getTileType(), Tilesprite(tile)});
+        tilesprites.insert({tile.getTileType(), new Tilesprite(tile)});
     }
     return tilesprites[tile.getTileType()];
+}
+
+void Graphics::updateGlobalLightVec(double timePast)
+{
+    worldPos v{};
+    double r_sun{ 1.0 };
+    double dayCycleFactor{ 0.1 };
+    v.x = 2.0;
+
+    double angle{ std::fmod(dayCycleFactor * timePast, PI) };
+    v.y = - r_sun * std::cos(angle);
+    v.z =   r_sun * std::sin(angle);
+
+    v = WorldToNormalVec(v);
+
+    double vLength{ std::sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2)) };
+
+    v.x = -v.x / vLength;
+    v.y = -v.y / vLength;
+    v.z = -v.z / vLength;
+
+    m_globalLightVec = v;
+}
+
+// This calculate global light vector in normal map coordinate system
+void Graphics::updateGlobalLightVec2(double timePast)
+{
+    worldPos v{};
+    double r_sun{ 1.0 };
+    double dayCycleFactor{ 0.1 };
+    v.z = 2.0;
+
+    double angle{ std::fmod(dayCycleFactor * timePast, PI) };
+    v.x = - r_sun * std::cos(angle);
+    v.y =   r_sun * std::sin(angle);
+
+
+    double vLength{ std::sqrt(pow(v.x, 2) + pow(v.y, 2) + pow(v.z, 2)) };
+
+    v.x = -v.x / vLength;
+    v.y = -v.y / vLength;
+    v.z = -v.z / vLength;
+
+    m_globalLightVec = v;
 }

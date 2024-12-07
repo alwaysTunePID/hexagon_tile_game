@@ -5,10 +5,60 @@
 #include "EntitySprite.h"
 #include "Enums.h"
 
+EntitySprite::EntitySprite(WorldObjectType worldObjectType, int value)
+    : objectType{ worldObjectType }, entityType{ EntityType::last }, spellType{ SpellType::last }, effectType{ EffectType::last },
+      visualType{ VisualType::last }, textures{}, m_normalTexture{},
+      m_height{ static_cast<float>(GetSize(worldObjectType).h) },
+      m_width{ static_cast<float>(GetSize(worldObjectType).w) },
+      drawByPixel{ false }, animationLengths{}, sprite{}, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
+      pixelAnimationStep{ -1 }
+{
+    animationLengths.push_back(1);
+
+    std::string folderAndFile{ GetFolderAndFile(worldObjectType, value) };
+    std::vector<std::string> dirStrings{ "" };
+    if (GetTextureType(worldObjectType) == textureType::directional)
+        dirStrings = {"1", "2", "3", "4"};
+
+    sf::Texture texture{};
+    for (auto& dirString : dirStrings)
+    {
+        // "Players/PlayerA/PlayerA1.png"
+        std::string completePath{ "../../../resources/textures/" + folderAndFile + dirString + ".png" };
+        texture.loadFromFile(completePath);
+        textures.push_back(texture);
+
+        if (worldObjectType == WorldObjectType::mountain)
+        {
+            completePath = "../../../resources/textures/" + folderAndFile + dirString + "Normal.png";
+            m_normalTexture.loadFromFile(completePath);
+
+            if (!m_shader.loadFromFile("../../../shaders/object.frag", sf::Shader::Fragment))
+                std::cout << "ERROR: Couldn't load object.frag" << std::endl;
+        }
+    }
+
+    sprite.setTexture(textures[0]);
+    // TODO: How do we fix this?
+    if (worldObjectType == WorldObjectType::player)
+    {
+        sprite.setOrigin(m_width / 2, m_height / 2 + 12); // Is this hardcoding ok? 
+    }
+    else if (worldObjectType == WorldObjectType::grass)
+    {
+        sprite.setOrigin(m_width / 2, m_height / 2 + 2); // Is this hardcoding ok? 
+    }
+    else
+    {
+        sprite.setOrigin(m_width / 2, m_height - 12.5); // Is this hardcoding ok? 
+    }
+    sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
+}
+
 EntitySprite::EntitySprite(EntityType entityType, int value)
     : entityType{ entityType }, spellType{ SpellType::last }, effectType{ EffectType::last },
-      visualType{ VisualType::last },
-      height_{}, width_{}, drawByPixel{}, animationLengths{}, sprite{}, animationDataMap{}, pixelSprites{},
+      visualType{ VisualType::last }, textures{}, m_normalTexture{},
+      m_height{}, m_width{}, drawByPixel{}, animationLengths{}, sprite{}, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
       pixelAnimationStep{ -1 }
 {
     std::string folder{};
@@ -21,8 +71,8 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         folder = "Players/";
         name = "Player" + ToString(value);
         texturetype = textureType::directional;
-        width_ = WIZARD_WIDTH;
-        height_ = WIZARD_HEIGHT;
+        m_width = WIZARD_WIDTH;
+        m_height = WIZARD_HEIGHT;
         animationLengths.push_back(3);
         break;
 
@@ -31,8 +81,8 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         folder = "Spells/";
         name = ToString(spellType);
         texturetype = textureType::normal;
-        width_ = SPELL_WIDTH;
-        height_ = SPELL_HEIGHT;
+        m_width = SPELL_WIDTH;
+        m_height = SPELL_HEIGHT;
         animationLengths.push_back(3);
         break;
     
@@ -41,8 +91,8 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         folder = "Effects/";
         name = ToString(effectType);
         texturetype = GetTextureType(effectType);
-        width_ = EFFECT_WIDTH;
-        height_ = EFFECT_HEIGHT;
+        m_width = EFFECT_WIDTH;
+        m_height = EFFECT_HEIGHT;
         animationLengths.push_back(3); // Passive
         animationLengths.push_back(5); // Active
         break;
@@ -54,18 +104,18 @@ EntitySprite::EntitySprite(EntityType entityType, int value)
         texturetype = GetTextureType(visualType);
         // Ugly hardcoding, bad!
         if (visualType == VisualType::aim){
-            width_ = 5.f;
-            height_ = 5.f;
+            m_width = 5.f;
+            m_height = 5.f;
             animationLengths.push_back(3);
         }
         else if (visualType == VisualType::dot){
-            width_ = 1.f;
-            height_ = 1.f;
+            m_width = 1.f;
+            m_height = 1.f;
             animationLengths.push_back(1);
         }
         else{
-            width_ = VISUAL_WIDTH;
-            height_ = VISUAL_HEIGHT;
+            m_width = VISUAL_WIDTH;
+            m_height = VISUAL_HEIGHT;
             animationLengths.push_back(3);
         }
 
@@ -139,6 +189,32 @@ int EntitySprite::getTextureIndexDirOffset(directionType dir)
     default:
         return 0;
     }
+}
+
+int EntitySprite::dirToTextureIdx(directionType dir)
+{
+    switch (dir)
+    {
+    case directionType::up:
+        return 0;
+    case directionType::upLeft:
+        return 1;
+    case directionType::downLeft:
+        return 2;
+    case directionType::down:
+        return 3;
+    case directionType::downRight:
+        return 2;
+    case directionType::upRight:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
+float EntitySprite::getHFlipFactor(directionType dir)
+{
+    return (dir == directionType::downRight || dir == directionType::upRight) ? -1.f : 1.f;
 }
 
 // TODO: This is very much a copy of the function in Tilesprite. How do we solve this???
@@ -268,7 +344,7 @@ void EntitySprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directio
     int textureIndex{ offset + dirOffset + animationdata.frameIdx };
     sprite.setTexture(textures[textureIndex]);
 
-    sprite.setOrigin(width_ / 2, height_ / 2);
+    sprite.setOrigin(m_width / 2, m_height / 2);
 
     if (entityType == EntityType::player)
         pos.second -= 14.f;
@@ -284,6 +360,34 @@ void EntitySprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directio
     drawByPixel = false;
 }
 
+void EntitySprite::updateSprite(WorldObject& worldObject, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
+{
+    directionType dir{ worldObject.getDir() };
+    int textureIndex { dirToTextureIdx(dir) };
+    sprite.setTexture(textures[textureIndex]);
+    displayInput camera { reflected ? CAMERA_0 : camera_in };
+    screenPos s_pos{ WorldToScreenPos(worldObject.getPos(), camera) };
+    sprite.setPosition(s_pos.x, s_pos.y);
+    float reflectionFlip{ reflected ? -1.f : 1.f };
+    sprite.setScale(sf::Vector2f(getHFlipFactor(dir) * camera.zoom, reflectionFlip * camera.zoom));
+    float rotation{ reflected ? -16.f : 0.f };
+    sprite.setRotation(rotation);
+
+    if (objectType == WorldObjectType::mountain)
+    {
+        sf::Vector3f negScreenLightVec{
+            -static_cast<float>(globalLightVec.x),
+            -static_cast<float>(globalLightVec.y),
+            -static_cast<float>(globalLightVec.z)
+        };
+
+        m_shader.setUniform("texturee", sf::Shader::CurrentTexture);
+        m_shader.setUniform("normalMap", m_normalTexture);
+        m_shader.setUniform("negScreenLightDir", negScreenLightVec);
+        m_enableShaders = camera_in.enableShaders;
+    }
+}
+
 // TODO: Remove elements from animationDataMap at some point???
 void EntitySprite::updateSprite(int id, worldPos w_pos, directionType dir, displayInput& camera)
 {
@@ -296,11 +400,11 @@ void EntitySprite::updateSprite(int id, worldPos w_pos, directionType dir, displ
 
     if (entityType == EntityType::player)
     {
-        sprite.setOrigin(width_ / 2, height_ / 2 + 12);
+        sprite.setOrigin(m_width / 2, m_height / 2 + 12);
     }
     else
     {
-        sprite.setOrigin(width_ / 2, height_ / 2);
+        sprite.setOrigin(m_width / 2, m_height / 2);
     }
 
     screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
@@ -318,7 +422,7 @@ void EntitySprite::updateSprite(int id, worldPos w_pos, directionType dir, displ
 void EntitySprite::updateSprite(worldPos w_pos, displayInput& camera)
 {
     sprite.setTexture(textures[0]);
-    sprite.setOrigin(width_ / 2, height_ / 2);
+    sprite.setOrigin(m_width / 2, m_height / 2);
 
     screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
     sprite.setPosition(s_pos.x, s_pos.y);
@@ -340,7 +444,7 @@ void EntitySprite::updateSprite(int id, effectData& effect, TileIdx tileIdx, dis
     int textureIndex{ offset + animationdata.frameIdx };
     sprite.setTexture(textures[textureIndex]);
 
-    sprite.setOrigin(width_ / 2, height_ / 2);
+    sprite.setOrigin(m_width / 2, m_height / 2);
     sprite.setPosition(tileIdxToPos(tileIdx, camera));
     setRot(effect.direction);
     sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
@@ -358,7 +462,7 @@ void EntitySprite::updateSprite(castedSpellData& spellData, displayInput& camera
         int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
         int textureIndex{ offset + animationdata.frameIdx };
         sprite.setTexture(textures[textureIndex]);
-        sprite.setOrigin(width_ / 2, height_ / 2);
+        sprite.setOrigin(m_width / 2, m_height / 2);
 
         setPos(spellData, camera);
         sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
@@ -389,7 +493,15 @@ void EntitySprite::draw(sf::RenderWindow& window)
         return;
     }
 
-    window.draw(sprite);
+    if (m_enableShaders)
+        window.draw(sprite, &m_shader);
+    else
+        window.draw(sprite);
+}
+
+void EntitySprite::draw(sf::RenderTexture& surface)
+{
+    surface.draw(sprite, &m_shader);
 }
 
 // Move this to a new file??
@@ -398,9 +510,9 @@ void EntitySprite::updateTeleportAnimation(castedSpellData& spellData, displayIn
     if (pixelSprites.empty())
     {
         sf::Image image = sprite.getTexture()->copyToImage();
-        for (unsigned int y = 0; y < height_; y++)
+        for (unsigned int y = 0; y < m_height; y++)
         {
-            for (unsigned int x = 0; x < width_; x++)
+            for (unsigned int x = 0; x < m_width; x++)
             {
                 sf::Color color = image.getPixel(x,y);
                 // Skip transparent pixels

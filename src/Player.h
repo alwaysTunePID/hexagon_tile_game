@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include "Tile.h"
+#include "WorldObject.h"
 #include "Enums.h"
 
 class Player
@@ -33,10 +34,11 @@ private:
     directionType selectedSpellDirection;
     std::vector<SpellType> selectionSpells;
     std::vector<SpellType> discoveredSpells;
+    std::map<int, WorldObject>* worldObjects;
 
 public:
     Player();
-    Player(int id, TileIdx tileIdx);
+    Player(int id, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
     Player(int points, int turnTime, int id, bool currentPlayer);
     ~Player();
 

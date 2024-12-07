@@ -8,7 +8,7 @@
 #include "Board.h"
 
 Game::Game(unsigned seed)
-    : tileId{ 0 }, effectId { 0 }, players{}, effects{}, boardSize { 8 }, board{ boardSize },
+    : tileId{ 0 }, effectId { 0 }, objectId { 0 }, players{}, worldObjects{}, effects{}, boardSize { 8 }, board{ boardSize },
       state { stateType::lobby }, seed{seed}, updateCounter{}
 {
     castedSpellData castedSpell{};
@@ -23,14 +23,16 @@ Game::~Game()
 
 void Game::createPlayer()
 {
-    static int newPlayerId{ 0 };
+    uint16_t newPlayerId{ getNewObjectId() };
     TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(newPlayerId) };
-    Player player{newPlayerId, tileIdx};
+
+    WorldObject worldObject{ newPlayerId, WorldObjectType::player, TileIdxToWorldPos(tileIdx) };
+    worldObjects.insert({ newPlayerId, worldObject });
+
+    Player player{newPlayerId, tileIdx, &worldObjects };
     if (newPlayerId == 0)
         player.setCurrentPlayer(true);
     players.insert({newPlayerId, player});
-
-    newPlayerId++;
 }
 
 void Game::addPlayer(Player player)
@@ -76,6 +78,7 @@ void Game::update(gameInput input, int playerId, double dt)
         {
             bool moved{ false };
             moved = tryMove(player, dt);
+            //std::cout << "dt: " << dt << std::endl;
             if (moved)
             {
                 executeProperties(player);
@@ -211,6 +214,11 @@ Tile& Game::getTile(TileIdx tileIdx)
 std::map<int, Player>& Game::getPlayers()
 {
     return players;
+}
+
+std::map<int, WorldObject>& Game::getWorldObjects()
+{
+    return worldObjects;
 }
 
 Player& Game::getPlayer(int id)
@@ -516,9 +524,49 @@ uint16_t Game::getNewEffectId()
     return returnId;
 }
 
+uint16_t Game::getNewObjectId()
+{
+    uint16_t returnId = objectId;
+    objectId++;
+    return returnId;
+}
+
+void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
+{
+    // switch didn't work because of stupid initialization of class in switch case issue.
+    if (tile.getTileType() == tileType::mountain)
+    {
+        uint16_t id{ getNewObjectId() };
+        WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx) };
+        worldObjects.insert({ id, mountain });
+    }
+    else if (tile.getTileType() == tileType::grass)
+    {
+        double inc{ 0.2 };
+        std::uniform_real_distribution<double> dist(0.0, 0.15);
+        double temp { dist(generator) };
+        for (int i{0}; i < 4; i++)
+        {
+            for (int ii{0}; ii < 4; ii++)
+            {
+                uint16_t id{ getNewObjectId() };
+                WorldObject grass{ id, WorldObjectType::grass, TileIdxToWorldPos(tileIdx) };
+                worldPos w_pos{ grass.getPos() };
+
+                w_pos.x += (inc * i - 0.42 + dist(generator));
+                w_pos.y += (inc * ii - 0.42 + dist(generator)); 
+                grass.setPos(w_pos);
+                worldObjects.insert({ id, grass });
+                // You thought you could flip every other grass here by setting a direction but then EntitySprite will
+                // try to look for another texture as well...
+            }
+        }
+    }
+}
+
 void Game::generateLevel()
 {
-    std::array<int, 3> OBJECT_PROB{ 60, 30, 10 };
+    std::array<int, 3> OBJECT_PROB{ 30, 30, 40 };  // { 60, 30, 10 };
     std::discrete_distribution<int> dist_objects{ OBJECT_PROB.begin(), OBJECT_PROB.end() };
 
     for (int i = 0; i <= boardSize; i++)
@@ -544,6 +592,7 @@ void Game::generateLevel()
             }
 
             addTile(tile, tileIdx);
+            addAssociateObject(tile, tileIdx);
         }
     }
 }

@@ -25,3 +25,9 @@ After this is implemented the animation of it should be begun with
 
 ### Slime
 How do we get to slime?... Reddit says byproduct of missused magick... but which magick then. Blood from another player dying maybe??? Or even better idea, a meteor from space with this goo on.
+
+## Shaders
+https://learnwebgl.brown37.net/12_shader_language/glsl_builtin_functions.html 
+
+## Graphics
+ If you need a depth buffer for 3D rendering, don't forget to request it when calling RenderTexture::create

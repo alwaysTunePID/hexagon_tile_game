@@ -9,9 +9,6 @@
 
 int main()
 {
-    unsigned int WIDTH{ 1920 };
-    unsigned int HEIGHT{ 1080 };
-
     double joyThreshHigh{ 0.0 };
     double joyThreshLow{ 0.0 };
     unsigned seed { 2952795 };
@@ -20,9 +17,11 @@ int main()
 
     bool enableDebugPrint{ false };
     bool showCoordinateSystem{ false };
+    bool enableShaders{ false };
 
-    auto window = sf::RenderWindow { {WIDTH, HEIGHT}, "Some Game" };
+    auto window = sf::RenderWindow { {WIDTH2, HEIGHT2}, "Some Game" };
     window.setFramerateLimit(144);
+    window.setVerticalSyncEnabled(true);
 
     ConfigParser configParser{ configPath };
     configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
@@ -145,6 +144,19 @@ int main()
                     showCoordinateSystem = true;
                 }
             }
+            else if ((event.type == sf::Event::KeyReleased) && (event.key.code == sf::Keyboard::V))
+            {
+                if (enableShaders)
+                {
+                    std::cout << "Disable Shaders" << std::endl;
+                    enableShaders = false;
+                }
+                else
+                {
+                    std::cout << "Enable Shaders" << std::endl;
+                    enableShaders = true;
+                }
+            }
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
             {
                 configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
@@ -212,7 +224,7 @@ int main()
             input.move.angle = atan2(posY, posX);
         }
         else{
-            input.move.power = 0;
+            input.move.power = 0.f;
             input.move.angle = 0.f;
         }
 
@@ -228,6 +240,7 @@ int main()
         }
 
         dispInput.showCoordinateSystem = showCoordinateSystem;
+        dispInput.enableShaders = enableShaders;
 
         if (tileSpacingIgnoreCounter > 0)
             tileSpacingIgnoreCounter -= 1;

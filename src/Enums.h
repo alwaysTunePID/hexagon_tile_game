@@ -13,12 +13,12 @@
 
 #define INIT_SCALE 2
 
-#define WIDTH2 1920
-#define HEIGHT2 1080
-
 #define TURN_TIME 90
 
 #define PI 3.14159265
+
+const int WIDTH2{ 1920 };
+const int HEIGHT2{ 1080 };
 
 const double SQ_WIDTH{ 48 };
 const double SQ_HEIGHT{ 36 };
@@ -69,6 +69,11 @@ typedef struct worldAcc {
     double z;
 } worldAcc;
 
+typedef struct textureSize {
+    uint16_t w;
+    uint16_t h;
+} textureSize;
+
 typedef std::chrono::system_clock Time;
 typedef std::chrono::time_point<Time> timePoint;
 typedef std::chrono::duration<double> timeDuration;
@@ -117,9 +122,11 @@ enum class EffectType
     last
 };
 
-enum class StaticObjectType
+enum class WorldObjectType
 {
+    player,
     tree,
+    grass,
     mountain,
     last
 };
@@ -296,14 +303,18 @@ inline bool HasTexture(EffectType effect)
     }
 }
 
-inline std::pair<uint16_t, uint16_t> GetSize(StaticObjectType staticObject)
+inline textureSize GetSize(WorldObjectType objectType)
 {
-    switch (staticObject)
+    switch (objectType)
     {
-        case StaticObjectType::tree:
+        case WorldObjectType::player:
+            return {16, 32};
+        case WorldObjectType::tree:
             return {16, 60};
-        case StaticObjectType::mountain:
-            return {60, 60};
+        case WorldObjectType::grass:
+            return {10, 5};
+        case WorldObjectType::mountain:
+            return {48, 44};
         default:
             return {1, 1};
     }
@@ -336,6 +347,17 @@ inline std::string ToString(tileType tile)
     }
 }
 
+inline std::string ToString(WorldObjectType worldObject)
+{
+    switch (worldObject)
+    {
+        case WorldObjectType::player:            return "Player";
+        case WorldObjectType::grass:             return "Grass";
+        case WorldObjectType::mountain:          return "Mountain";
+        default:      return "[Unknown WorldObjectType]";
+    }
+}
+
 //std::array<int, 3> OBJECT_PROB{ 60, 30, 10 }; // grass, mountain, water
 //std::array<int, 2> CONNECTOR_PROB{ 90, 10 }; // is, And
 //const int N_TEXTTYPES{ 13 };
@@ -346,9 +368,9 @@ inline std::string ToString(int id)
     {
         case 0:   return "A";
         case 1:   return "B";
-        case 3:   return "C";
-        case 4:   return "D";
-        case 5:   return "E";
+        case 2:   return "C";
+        case 3:   return "D";
+        case 4:   return "E";
         default:  return "[Unknown Player Id]";
     }
 }
@@ -405,6 +427,20 @@ inline std::string ToString(directionType direction)
     }
 }
 
+inline std::string GetFolderAndFile(WorldObjectType worldObject, int id)
+{
+    switch (worldObject)
+    {
+        case WorldObjectType::player:
+            return "Players/Player" + ToString(id) + "/Player" + ToString(id);
+        case WorldObjectType::grass:
+            return "Grass/Grass" + ToString(id % 3); // The id decides which of the 3 grass textures
+        case WorldObjectType::mountain:
+            return "Mountain/Mountain";
+        default:      return "[Unknown WorldObjectType for GetFolderAndFile]";
+    }
+}
+
 enum class textureType 
 {   directional,
     normal,
@@ -418,6 +454,29 @@ inline textureType GetTextureType(tileType tile)
     {
         default:
             return textureType::normal;
+    }
+}
+
+inline textureType GetTextureType(WorldObjectType objectType)
+{
+    switch (objectType)
+    {
+        case WorldObjectType::player:
+            return textureType::directional;
+        default:
+            return textureType::normal;
+    }
+}
+
+inline directionType GetInitDir(WorldObjectType objectType)
+{
+    textureType textureT{ GetTextureType(objectType) };
+    switch (textureT)
+    {
+        case textureType::directional:
+            return directionType::up;
+        default:
+            return directionType::none;
     }
 }
 
@@ -540,7 +599,7 @@ enum class LJoyMode
 
 typedef struct moveInput {
     float angle;
-    int power;
+    float power;
 } moveInput;
 
 typedef struct gameInput {
@@ -555,8 +614,10 @@ typedef struct displayInput {
     float vertical;
     bool tileSpacing;
     bool showCoordinateSystem;
+    bool enableShaders;
 } displayInput;
 
+constexpr displayInput CAMERA_0{ 1.0 , WIDTH2 / 2, HEIGHT2 / 2, false, false, false };
 
 // TODO: This should be moved to it's own file
 inline worldVel InputToWorldVel(moveInput moveInput)
@@ -601,7 +662,7 @@ inline TileIdx WorldPosToTileIdx(worldPos w_pos)
     return tileIdx;
 }
 
-inline screenPos WorldToScreenPos(worldPos worldPos, displayInput& camera)
+inline screenPos WorldToScreenPos(worldPos worldPos, const displayInput& camera)
 {
     screenPos s_pos;
 
@@ -613,6 +674,21 @@ inline screenPos WorldToScreenPos(worldPos worldPos, displayInput& camera)
                 (worldPos.x * 12.0  - worldPos.y * 16.0 - worldPos.z * 16.0) * camera.zoom); 
     
     return s_pos;
+}
+
+inline worldPos WorldToNormalVec(worldPos worldVec)
+{    
+    worldPos n_vec;
+
+    float a1{ 0.89443 }; // sin(arctan(2))
+    float a2{ 0.44721 }; // cos(arctan(2))
+    float a3{ 0.86603 }; // cos(arcsin(0.5)) = sin(arccos(0.5))
+
+    n_vec.x = static_cast<float>( worldVec.x * a1 + worldVec.y * a1);
+    n_vec.y = static_cast<float>(-worldVec.x * a2 + worldVec.y * a2 + worldVec.z * a3);
+    n_vec.z = static_cast<float>(-worldVec.x * a3 + worldVec.y * a3 + worldVec.z * 0.5);
+
+    return n_vec;
 }
 
 #endif

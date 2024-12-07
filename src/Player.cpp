@@ -3,11 +3,12 @@
 #include <cmath>
 #include "Player.h"
 #include "Tile.h"
+#include "WorldObject.h"
 
 Player::Player()
 {}
 
-Player::Player(int id, TileIdx tileIdx)
+Player::Player(int id, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
     : points{ 0 }, turnTime{ 40 }, name{ "Bob" }, 
       id{ id }, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
       w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
@@ -15,7 +16,7 @@ Player::Player(int id, TileIdx tileIdx)
       clock{}, currentPlayer{ false }, lJoyMode{ LJoyMode::move },
       spellOngoing{ false }, selectedSpellIdx{ 0 },
       selectedSpellDirection{ directionType::none },
-      selectionSpells{}, discoveredSpells{}
+      selectionSpells{}, discoveredSpells{}, worldObjects{ worldObjects }
 {
     //TODO: This is not right!!
     selectionSpells.push_back(SpellType::fireball);
@@ -78,12 +79,12 @@ void Player::setPos(PosInTile posT)
 
 worldPos Player::getWorldPos()
 {
-    return w_pos;
+    return (*worldObjects)[id].getPos(); // DO THIS FOR ALL THE POS STUFF! 
 }
 
 void Player::setWorldPos(worldPos posT)
 {
-    w_pos = posT;
+    (*worldObjects)[id].setPos(posT);
 }
 
 PosInTile& Player::getAimPos()
@@ -98,7 +99,7 @@ void Player::setAimPos(PosInTile posT)
 
 directionType Player::getDir()
 {
-    return dir;
+    return (*worldObjects)[id].getDir();;
 }
 
 int Player::getSpawnTileId()
@@ -113,12 +114,7 @@ void Player::setSpawnTileId(int tileIdt)
 
 worldPos Player::getUpdatedPos(double dt)
 {
-    worldPos updatedPos{
-        w_pos.x + w_vel.x * dt,
-        w_pos.y + w_vel.y * dt,
-        w_pos.z + w_vel.z * dt
-    };
-    return updatedPos;
+    return (*worldObjects)[id].getUpdatedPos(dt);
 }
 
 PosInTile Player::getUpdatedAimPos(double dt)
@@ -132,36 +128,7 @@ PosInTile Player::getUpdatedAimPos(double dt)
 
 void Player::setVelocity(moveInput& move)
 {
-    w_vel = InputToWorldVel(move);
-
-    // TODO: Similar code in Board.cpp, move this!
-    float ang1{ 0.983 };
-
-    float angle{ move.angle };
-    if (angle > 0.f && angle <= ang1)
-    {
-        dir = directionType::downRight;
-    }
-    else if (angle > ang1 && angle <= PI - ang1)
-    {
-        dir = directionType::down;
-    }
-    else if (angle > PI - ang1 && angle <= PI)
-    {
-        dir = directionType::downLeft;
-    }
-    else if (angle < -PI + ang1 && angle >= -PI)
-    {
-        dir = directionType::upLeft;
-    }
-    else if (angle < -ang1 && angle >= -PI + ang1)
-    {
-        dir = directionType::up;
-    }
-    else if (angle < 0 && angle >= -ang1)
-    {
-        dir = directionType::upRight;
-    }
+    (*worldObjects)[id].setVelocity(move);
 }
 
 void Player::setAimVelocity(moveInput& move)

@@ -7,6 +7,7 @@
 #include <map>
 #include <random>
 #include "Tile.h"
+#include "WorldObject.h"
 #include "Board.h"
 #include "Player.h"
 #include "Fire.h"
@@ -17,9 +18,11 @@ private:
     std::map<int, Tile> tiles;
     int tileId;
     uint16_t effectId;
+    uint16_t objectId;
     std::vector<std::pair<std::map<int, Tile>,Board>> blockHistory;
     int currentPlayer;
     std::map<int, Player> players;
+    std::map<int, WorldObject> worldObjects;
     std::map<int, Fire> effects;
     stateType state;
     gameEventType event{gameEventType::none};
@@ -43,6 +46,7 @@ public:
     std::map<int, Tile>& getTiles();
     Tile& getTile(TileIdx tileIdx);
     std::map<int, Player>& getPlayers();
+    std::map<int, WorldObject>& getWorldObjects();
     Player& getPlayer(int id);
     gameEventType getEvent();
     void setEvent(gameEventType event);
@@ -70,6 +74,8 @@ public:
     bool isOutOfBounds(TileIdx tileIdx);
     int getNewTileId();
     uint16_t getNewEffectId();
+    uint16_t getNewObjectId();
+    void addAssociateObject(Tile& tile, TileIdx tileIdx);
     void generateLevel();
     bool isASpawnTile(TileIdx tileIdx);
     void setPlayersSpawnTiles();
