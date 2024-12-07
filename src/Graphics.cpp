@@ -3,9 +3,11 @@
 #include <thread>
 #include <chrono>
 #include "Graphics.h"
+#include "WorldObjectSprite.h"
+#include "Transformations.h"
 
 Graphics::Graphics()
-    : clock{}, worldObjectSprites{}, entitySprites{}, tilesprites{},
+    : clock{}, worldObjectSprites{}, tilesprites{},
       font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{}, m_tileSurface{}, m_initTime{ Time::now() },
       m_timePastForShader{}, m_globalLightVec{}
 {
@@ -63,8 +65,8 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
     {
         clock.restart();
 
-        /*for (auto& [pairShit, entitySprite] : entitySprites)
-            entitySprite.updateFrameIdx();
+        /*for (auto& [pairShit, worldObjectSprite] : worldObjectSprites)
+            worldObjectSprite.updateFrameIdx();
 
         for (auto& [tiletype, tilesprite] : tilesprites)
             tilesprite.updateFrameIdx();*/
@@ -78,8 +80,6 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
     drawTiles(game, window, reflectionSprite);
 
     drawWorldObjects(game, window);
-    
-    //drawPlayers(game, window);
 
     for (castedSpellData& castedSpell : game.getCastedSpells())
     {
@@ -88,9 +88,9 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
         }
         else {
             int value{ static_cast<int>(castedSpell.spellType) };
-            EntitySprite* entitySprite_p{ getEntitySprite(EntityType::spell, value) };
-            entitySprite_p->updateSprite(castedSpell, camera);
-            entitySprite_p->draw(window);
+            WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(WorldObjectType::spell, value) };
+            //worldObjectSprite_p->updateSprite(castedSpell, camera);
+            //worldObjectSprite_p->draw(window);
         }
     }
 
@@ -151,9 +151,9 @@ void Graphics::drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& refle
                         if (HasTexture(effect.type))
                         {
                             int value{ static_cast<int>(effect.type) };
-                            EntitySprite& entitySprite{ getEntitySprite(EntityType::effect, value) };
-                            entitySprite.updateSprite(tile.getId(), effect, tile.getTileIdx(), camera);
-                            entitySprite.draw(window);
+                            WorldObjectSprite& worldObjectSprite{ getWorldObjectSprite(WorldObjectType::effect, value) };
+                            worldObjectSprite.updateSprite(tile.getId(), effect, tile.getTileIdx(), camera);
+                            worldObjectSprite.draw(window);
                         }
                         // Is this really the way to do it?
                         if (effect.type == EffectType::spawn)
@@ -161,30 +161,6 @@ void Graphics::drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& refle
                     }*/
                 }
             }
-        }
-    }
-}
-
-
-void Graphics::drawPlayersOnTile(Game& game, sf::RenderWindow& window, Tile& tile)
-{
-    for (auto& [id, player] : game.getPlayers())
-    {
-        if (player.getTileIdx() == tile.getTileIdx())
-        {
-            // Player characters on board
-            EntitySprite* playersprite_p{ getEntitySprite(EntityType::player, player.getId()) };
-            if (player.isSpellOngoing()) {
-                for (castedSpellData& castedSpell : game.getCastedSpells())
-                {
-                    if (castedSpell.playerId == player.getId())
-                        playersprite_p->updateSprite(castedSpell, camera);
-                }
-            }
-            else {
-                playersprite_p->updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
-            }
-            playersprite_p->draw(window);
         }
     }
 }
@@ -221,9 +197,7 @@ void Graphics::drawWorldObjects(Game& game, sf::RenderWindow& window)
 
     for (WorldObject& worldObject : worldObjects)
     {
-        //TileIdx tileIdx{ WorldPosToTileIdx(worldObject.getPos()) };
-        //std::cout << "id: " << worldObject.getId() << " tileIdx: " << tileIdx.first << " " << tileIdx.second << std::endl;
-        EntitySprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
         worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
         worldObjectSprite_p->draw(window);
     }
@@ -239,31 +213,9 @@ void Graphics::drawReflections(Game& game)
     // Draw objects in reflected perspective
     for (WorldObject& worldObject : worldObjects)
     {
-        //TileIdx tileIdx{ WorldPosToTileIdx(worldObject.getPos()) };
-        //std::cout << "id: " << worldObject.getId() << " tileIdx: " << tileIdx.first << " " << tileIdx.second << std::endl;
-        EntitySprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
         worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
         worldObjectSprite_p->draw(m_reflectionSurface);
-    }
-}
-
-void Graphics::drawPlayers(Game& game, sf::RenderWindow& window)
-{
-    for (auto& [id, player] : game.getPlayers())
-    {
-            // Player characters on board
-            EntitySprite* playersprite_p{ getEntitySprite(EntityType::player, player.getId()) };
-            if (player.isSpellOngoing()) {
-                for (castedSpellData& castedSpell : game.getCastedSpells())
-                {
-                    if (castedSpell.playerId == player.getId())
-                        playersprite_p->updateSprite(castedSpell, camera);
-                }
-            }
-            else {
-                playersprite_p->updateSprite(player.getId(), player.getWorldPos(), player.getDir(), camera);
-            }
-            playersprite_p->draw(window);
     }
 }
 
@@ -271,7 +223,7 @@ void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
 {
     worldPos unitWorldPos{ 0, 0, 0 };
     int value{ static_cast<int>(VisualType::dot) };
-    EntitySprite* dotSprite_p{ getEntitySprite(EntityType::visual, value) };
+    WorldObjectSprite* dotSprite_p{ getWorldObjectSprite(WorldObjectType::visual, value) };
 
     for (int x{-4}; x <= 4; x++)
     {
@@ -304,10 +256,6 @@ void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
         dotSprite_p->updateSprite(boundVertex, camera);
         dotSprite_p->draw(window);
     }
-
-    // TODO: Shouldn't be here
-    std::cout << "Global light: " << m_globalLightVec.x << ", " << m_globalLightVec.y << ", " << m_globalLightVec.z << std::endl; 
-
 }
 
 void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
@@ -357,16 +305,16 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
                 directionType direction{ player.getSelectedSpellDir() };
 
                 int value1{ static_cast<int>(VisualType::aim) };
-                EntitySprite* entitySprite1_p{ getEntitySprite(EntityType::visual, value1) };
-                entitySprite1_p->updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
-                entitySprite1_p->draw(window);
+                WorldObjectSprite* worldObjectSprite1_p{ getWorldObjectSprite(WorldObjectType::visual, value1) };
+                //worldObjectSprite1_p->updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
+                //worldObjectSprite1_p->draw(window);
 
                 if (IsDirectional(player.getSelectedSpell()))
                 {
                     int value{ static_cast<int>(VisualType::aimDir) };
-                    EntitySprite* entitySprite_p{ getEntitySprite(EntityType::visual, value) };
-                    entitySprite_p->updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
-                    entitySprite_p->draw(window);
+                    WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(WorldObjectType::visual, value) };
+                    //worldObjectSprite_p->updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
+                    //worldObjectSprite_p->draw(window);
                 }
             }
             drawInventory(player, window);
@@ -437,25 +385,14 @@ void Graphics::drawInventory(Player& player, sf::RenderWindow& window)
     }
 }
 
-EntitySprite* Graphics::getWorldObjectSprite(WorldObjectType objectType, int value)
+WorldObjectSprite* Graphics::getWorldObjectSprite(WorldObjectType objectType, int value)
 {
     std::pair<WorldObjectType, int> key{ objectType, value };
     if (worldObjectSprites.find(key) == worldObjectSprites.end()) {
         // Couldn't find sprite so add it
-        worldObjectSprites.insert({ key, new EntitySprite(objectType, value) });
+        worldObjectSprites.insert({ key, new WorldObjectSprite(objectType, value) });
     }
     return worldObjectSprites[key];
-}
-
-
-EntitySprite* Graphics::getEntitySprite(EntityType entitytype, int value)
-{
-    std::pair<EntityType, int> key{ entitytype, value };
-    if (entitySprites.find(key) == entitySprites.end()) {
-        // Couldn't find sprite so add it
-        entitySprites.insert({ key, new EntitySprite(entitytype, value) });
-    }
-    return entitySprites[key];
 }
 
 // For some reason I couldn't get this to build if I didn't make it a pointer to the Tilesprite

@@ -62,7 +62,7 @@ public:
     void castSpell();
     void updateCastedSpells();
     void executeSpell(castedSpellData& spell);
-    void affectEntity(castedSpellData& spell);
+    void affectWorldObject(castedSpellData& spell);
     void checkWinCondition();
     std::map<int,TileIdx> getTextBlockTiles();
     void removeBlocksProperties();

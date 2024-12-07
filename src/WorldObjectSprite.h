@@ -19,11 +19,10 @@ typedef struct pixelData {
     std::vector<sf::Vector2f> relPosHistory;
 } pixelData;
 
-class EntitySprite
+class WorldObjectSprite
 {
 private:
     WorldObjectType objectType;
-    EntityType entityType;
     SpellType spellType;
     EffectType effectType;
     VisualType visualType;
@@ -43,10 +42,9 @@ private:
     int pixelAnimationStep;
 
 public:
-    EntitySprite(EntityType entityType, int value);
-    EntitySprite(WorldObjectType worldObjectType, int value);
-    EntitySprite();
-    ~EntitySprite();
+    WorldObjectSprite(WorldObjectType worldObjectType, int value);
+    WorldObjectSprite();
+    ~WorldObjectSprite();
 
     int getTextureIndexDirOffset(directionType dir);
     int dirToTextureIdx(directionType dir);
@@ -58,12 +56,8 @@ public:
     void setRot(directionType dir);
     void setScale(castedSpellData& spellData, displayInput& camera);
     void updateFrameIdx();
-    void updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera);
-    void updateSprite(WorldObject& worldObject, displayInput& camera, worldPos& globalLightVec, bool reflected); // New, with worldObject
-    void updateSprite(int id, worldPos w_pos, directionType dir, displayInput& camera); // New, with worldPos
+    void updateSprite(WorldObject& worldObject, displayInput& camera, worldPos& globalLightVec, bool reflected);
     void updateSprite(worldPos w_pos, displayInput& camera);
-    void updateSprite(int id, effectData& effect, TileIdx tileIdx, displayInput& camera);
-    void updateSprite(castedSpellData& spellData, displayInput& camera);
     void addInstance(int id, animationData animationdata);
     animationData& getAnimationData(int id);
     void draw(sf::RenderWindow& window);

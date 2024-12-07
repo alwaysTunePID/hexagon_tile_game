@@ -1,4 +1,5 @@
 #include "WorldObject.h"
+#include "Transformations.h"
 
 WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos)
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, effects{}

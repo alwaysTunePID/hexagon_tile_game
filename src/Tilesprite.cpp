@@ -4,6 +4,7 @@
 #include "Tile.h"
 #include "Tilesprite.h"
 #include "Enums.h"
+#include "Transformations.h"
 
 Tilesprite::Tilesprite(Tile& tile)
     : textures{}, highlightTexture{}, frameIdx{ 0 }, tileShape{}, m_tileSurface{}, sprite{}, highlightSprite{}, type{ tile.getTileType() }, m_shader{}

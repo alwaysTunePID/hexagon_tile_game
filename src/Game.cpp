@@ -2,6 +2,7 @@
 #include <chrono>
 #include <iostream>
 #include "Enums.h"
+#include "Transformations.h"
 #include "Game.h"
 #include "Player.h"
 #include "Tile.h"
@@ -448,10 +449,10 @@ void Game::executeSpell(castedSpellData& castedSpell)
 
     std::cout << "Executed Spell dir: " << ToString(castedSpell.dir) << std::endl;
 
-    affectEntity(castedSpell);
+    affectWorldObject(castedSpell);
 }
 
-void Game::affectEntity(castedSpellData& spell)
+void Game::affectWorldObject(castedSpellData& spell)
 {
     Player& player{ getPlayer(spell.playerId) };
 
@@ -557,7 +558,7 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
                 w_pos.y += (inc * ii - 0.42 + dist(generator)); 
                 grass.setPos(w_pos);
                 worldObjects.insert({ id, grass });
-                // You thought you could flip every other grass here by setting a direction but then EntitySprite will
+                // You thought you could flip every other grass here by setting a direction but then WorldObjectSprite will
                 // try to look for another texture as well...
             }
         }

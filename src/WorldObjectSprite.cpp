@@ -2,18 +2,24 @@
 #include <string>
 #include <iostream>
 #include <math.h>
-#include "EntitySprite.h"
+#include "WorldObjectSprite.h"
 #include "Enums.h"
+#include "Transformations.h"
 
-EntitySprite::EntitySprite(WorldObjectType worldObjectType, int value)
-    : objectType{ worldObjectType }, entityType{ EntityType::last }, spellType{ SpellType::last }, effectType{ EffectType::last },
+WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
+    : objectType{ worldObjectType }, spellType{ SpellType::last }, effectType{ EffectType::last },
       visualType{ VisualType::last }, textures{}, m_normalTexture{},
-      m_height{ static_cast<float>(GetSize(worldObjectType).h) },
-      m_width{ static_cast<float>(GetSize(worldObjectType).w) },
+      m_height{ static_cast<float>(GetSize(worldObjectType, value).h) },
+      m_width{ static_cast<float>(GetSize(worldObjectType, value).w) },
       drawByPixel{ false }, animationLengths{}, sprite{}, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
       pixelAnimationStep{ -1 }
 {
     animationLengths.push_back(1);
+
+    if (objectType == WorldObjectType::spell)
+        spellType = static_cast<SpellType>(value);
+    else if (objectType == WorldObjectType::visual)
+        visualType = static_cast<VisualType>(value);
 
     std::string folderAndFile{ GetFolderAndFile(worldObjectType, value) };
     std::vector<std::string> dirStrings{ "" };
@@ -23,7 +29,7 @@ EntitySprite::EntitySprite(WorldObjectType worldObjectType, int value)
     sf::Texture texture{};
     for (auto& dirString : dirStrings)
     {
-        // "Players/PlayerA/PlayerA1.png"
+        // E.g. "Players/PlayerA/PlayerA1.png"
         std::string completePath{ "../../../resources/textures/" + folderAndFile + dirString + ".png" };
         texture.loadFromFile(completePath);
         textures.push_back(texture);
@@ -48,128 +54,26 @@ EntitySprite::EntitySprite(WorldObjectType worldObjectType, int value)
     {
         sprite.setOrigin(m_width / 2, m_height / 2 + 2); // Is this hardcoding ok? 
     }
-    else
+    else if (worldObjectType == WorldObjectType::mountain)
     {
         sprite.setOrigin(m_width / 2, m_height - 12.5); // Is this hardcoding ok? 
     }
+    else
+    {
+        sprite.setOrigin(m_width / 2, m_height / 2); // Is this hardcoding ok? 
+    }
     sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 }
 
-EntitySprite::EntitySprite(EntityType entityType, int value)
-    : entityType{ entityType }, spellType{ SpellType::last }, effectType{ EffectType::last },
-      visualType{ VisualType::last }, textures{}, m_normalTexture{},
-      m_height{}, m_width{}, drawByPixel{}, animationLengths{}, sprite{}, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
-      pixelAnimationStep{ -1 }
-{
-    std::string folder{};
-    std::string name{};
-    textureType texturetype{};
-
-    switch (entityType)
-    {
-    case EntityType::player:
-        folder = "Players/";
-        name = "Player" + ToString(value);
-        texturetype = textureType::directional;
-        m_width = WIZARD_WIDTH;
-        m_height = WIZARD_HEIGHT;
-        animationLengths.push_back(3);
-        break;
-
-    case EntityType::spell:
-        spellType = static_cast<SpellType>(value);
-        folder = "Spells/";
-        name = ToString(spellType);
-        texturetype = textureType::normal;
-        m_width = SPELL_WIDTH;
-        m_height = SPELL_HEIGHT;
-        animationLengths.push_back(3);
-        break;
-    
-    case EntityType::effect:
-        effectType = static_cast<EffectType>(value);
-        folder = "Effects/";
-        name = ToString(effectType);
-        texturetype = GetTextureType(effectType);
-        m_width = EFFECT_WIDTH;
-        m_height = EFFECT_HEIGHT;
-        animationLengths.push_back(3); // Passive
-        animationLengths.push_back(5); // Active
-        break;
-    
-    case EntityType::visual:
-        visualType = static_cast<VisualType>(value);
-        folder = "Visuals/";
-        name = ToString(visualType);
-        texturetype = GetTextureType(visualType);
-        // Ugly hardcoding, bad!
-        if (visualType == VisualType::aim){
-            m_width = 5.f;
-            m_height = 5.f;
-            animationLengths.push_back(3);
-        }
-        else if (visualType == VisualType::dot){
-            m_width = 1.f;
-            m_height = 1.f;
-            animationLengths.push_back(1);
-        }
-        else{
-            m_width = VISUAL_WIDTH;
-            m_height = VISUAL_HEIGHT;
-            animationLengths.push_back(3);
-        }
-
-        break;
-
-    default:
-        break;
-    }
-
-    std::string imagePath{ "../../../resources/textures/" + folder + name + "/"};
-    std::string imagePathier{};
-    std::string completePath{};
-    sf::Texture texture{};
-    int numDirections{ 1 };
-
-    for (int animationLength : animationLengths)
-    {
-        if (entityType == EntityType::effect)
-        {
-            // Wierd assumption
-            if (animationLength == 3) {
-                imagePathier = imagePath + "Passive/" + name;
-            }
-            else {
-                imagePathier = imagePath + "Active/" + name + "A";
-            }
-        }
-        else {
-            imagePathier = imagePath + name;
-        }
-        if (texturetype == textureType::directional)
-            numDirections = 4;
-
-        for (int j = 0; j < animationLength * numDirections; j++) {
-            completePath = imagePathier + std::to_string(j + 1) + ".png";
-            texture.loadFromFile(completePath);
-            textures.push_back(texture);
-        }
-    }
-
-
-    sprite.setTexture(textures[0]);
-    sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
-}
-
-EntitySprite::EntitySprite()
+WorldObjectSprite::WorldObjectSprite()
 {
 }
 
-EntitySprite::~EntitySprite()
+WorldObjectSprite::~WorldObjectSprite()
 {
 }
 
-int EntitySprite::getTextureIndexDirOffset(directionType dir)
+int WorldObjectSprite::getTextureIndexDirOffset(directionType dir)
 {
     // TODO: This is hardcoded with the assumption that the animation is 3 frames
     switch (dir)
@@ -191,7 +95,7 @@ int EntitySprite::getTextureIndexDirOffset(directionType dir)
     }
 }
 
-int EntitySprite::dirToTextureIdx(directionType dir)
+int WorldObjectSprite::dirToTextureIdx(directionType dir)
 {
     switch (dir)
     {
@@ -212,13 +116,13 @@ int EntitySprite::dirToTextureIdx(directionType dir)
     }
 }
 
-float EntitySprite::getHFlipFactor(directionType dir)
+float WorldObjectSprite::getHFlipFactor(directionType dir)
 {
     return (dir == directionType::downRight || dir == directionType::upRight) ? -1.f : 1.f;
 }
 
 // TODO: This is very much a copy of the function in Tilesprite. How do we solve this???
-sf::Vector2f EntitySprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
+sf::Vector2f WorldObjectSprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
 {
     double spacing{ camera.tileSpacing ? 1.0 : 0.0 };
 
@@ -234,7 +138,7 @@ sf::Vector2f EntitySprite::tileIdxToPos(TileIdx tileIdx, displayInput& camera)
         static_cast<float>(camera.vertical + board_height) };
 }
 
-sf::Vector2f EntitySprite::tileIdxAndPosInTileToPos(TileIdx tileIdx, PosInTile& posInTile, displayInput& camera)
+sf::Vector2f WorldObjectSprite::tileIdxAndPosInTileToPos(TileIdx tileIdx, PosInTile& posInTile, displayInput& camera)
 {
     sf::Vector2f pos{ tileIdxToPos(tileIdx, camera) };
 
@@ -244,7 +148,7 @@ sf::Vector2f EntitySprite::tileIdxAndPosInTileToPos(TileIdx tileIdx, PosInTile& 
     return pos;
 }
 
-void EntitySprite::setPos(castedSpellData& spellData, displayInput& camera)
+void WorldObjectSprite::setPos(castedSpellData& spellData, displayInput& camera)
 {
     sf::Vector2f fromPos{ tileIdxToPos(spellData.fromTileIdx, camera) };
     sf::Vector2f toPos{ tileIdxToPos(spellData.toTileIdx, camera) };
@@ -259,7 +163,7 @@ void EntitySprite::setPos(castedSpellData& spellData, displayInput& camera)
         sprite.setRotation(atan2(distDiff.y, distDiff.x) * 180 / PI + 90.0);
 }
 
-sf::Vector2f EntitySprite::getPixelPos(unsigned int x, unsigned int y, displayInput& camera)
+sf::Vector2f WorldObjectSprite::getPixelPos(unsigned int x, unsigned int y, displayInput& camera)
 {
     // TODO: This implementation is strange. Can it be done better?
     sf::Vector2f spritePos{ sprite.getPosition() };
@@ -269,7 +173,7 @@ sf::Vector2f EntitySprite::getPixelPos(unsigned int x, unsigned int y, displayIn
     return pos;
 }
 
-void EntitySprite::setRot(directionType dir)
+void WorldObjectSprite::setRot(directionType dir)
 {
     float angle{};
     switch (dir)
@@ -299,7 +203,7 @@ void EntitySprite::setRot(directionType dir)
     sprite.setRotation(angle);
 }
 
-void EntitySprite::setScale(castedSpellData& spellData, displayInput& camera)
+void WorldObjectSprite::setScale(castedSpellData& spellData, displayInput& camera)
 {
     float scale{ 0.0 };
     if (spellData.traveledPerc < 20) {
@@ -313,7 +217,7 @@ void EntitySprite::setScale(castedSpellData& spellData, displayInput& camera)
     sprite.setScale(sf::Vector2f(scale * camera.zoom, scale * camera.zoom));
 }
 
-void EntitySprite::updateFrameIdx()
+void WorldObjectSprite::updateFrameIdx()
 {
     for (auto& [id, animationdata] : animationDataMap)
     {
@@ -334,33 +238,7 @@ void EntitySprite::updateFrameIdx()
     }
 }
 
-// TODO: Remove elements from animationDataMap at some point???
-void EntitySprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera)
-{
-    animationData& animationdata{ getAnimationData(id) };
-    // TODO: This will not work when having more than 2 animations
-    int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
-    int dirOffset { getTextureIndexDirOffset(dir) };
-    int textureIndex{ offset + dirOffset + animationdata.frameIdx };
-    sprite.setTexture(textures[textureIndex]);
-
-    sprite.setOrigin(m_width / 2, m_height / 2);
-
-    if (entityType == EntityType::player)
-        pos.second -= 14.f;
-
-    sprite.setPosition(tileIdxAndPosInTileToPos(tileIdx, pos, camera));
-    // TODO: You must add a way to differentiate between the two directional types.
-    if (entityType != EntityType::player)
-        setRot(dir);
-    int horizontalFlip{ (dir == directionType::downRight || dir == directionType::upRight) ? -1 : 1 };
-    sprite.setScale(sf::Vector2f(horizontalFlip * camera.zoom, camera.zoom));
-    pixelSprites.clear();
-    pixelAnimationStep = -1;
-    drawByPixel = false;
-}
-
-void EntitySprite::updateSprite(WorldObject& worldObject, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
+void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
 {
     directionType dir{ worldObject.getDir() };
     int textureIndex { dirToTextureIdx(dir) };
@@ -388,38 +266,7 @@ void EntitySprite::updateSprite(WorldObject& worldObject, displayInput& camera_i
     }
 }
 
-// TODO: Remove elements from animationDataMap at some point???
-void EntitySprite::updateSprite(int id, worldPos w_pos, directionType dir, displayInput& camera)
-{
-    animationData& animationdata{ getAnimationData(id) };
-    // TODO: This will not work when having more than 2 animations
-    int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
-    int dirOffset { getTextureIndexDirOffset(dir) };
-    int textureIndex{ offset + dirOffset + animationdata.frameIdx };
-    sprite.setTexture(textures[textureIndex]);
-
-    if (entityType == EntityType::player)
-    {
-        sprite.setOrigin(m_width / 2, m_height / 2 + 12);
-    }
-    else
-    {
-        sprite.setOrigin(m_width / 2, m_height / 2);
-    }
-
-    screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
-    sprite.setPosition(s_pos.x, s_pos.y);
-    // TODO: You must add a way to differentiate between the two directional types.
-    if (entityType != EntityType::player)
-        setRot(dir);
-    int horizontalFlip{ (dir == directionType::downRight || dir == directionType::upRight) ? -1 : 1 };
-    sprite.setScale(sf::Vector2f(horizontalFlip * camera.zoom, camera.zoom));
-    pixelSprites.clear();
-    pixelAnimationStep = -1;
-    drawByPixel = false;
-}
-
-void EntitySprite::updateSprite(worldPos w_pos, displayInput& camera)
+void WorldObjectSprite::updateSprite(worldPos w_pos, displayInput& camera)
 {
     sprite.setTexture(textures[0]);
     sprite.setOrigin(m_width / 2, m_height / 2);
@@ -429,7 +276,8 @@ void EntitySprite::updateSprite(worldPos w_pos, displayInput& camera)
     sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
 }
 
-void EntitySprite::updateSprite(int id, effectData& effect, TileIdx tileIdx, displayInput& camera)
+// TODO: Remove elements from animationDataMap at some point???
+/* void WorldObjectSprite::updateSprite(int id, TileIdx tileIdx, PosInTile pos, directionType dir, displayInput& camera)
 {
     animationData& animationdata{ getAnimationData(id) };
 
@@ -439,42 +287,37 @@ void EntitySprite::updateSprite(int id, effectData& effect, TileIdx tileIdx, dis
         animationdata.animationIdx = 1;
         animationdata.frameIdx = 0;
     }
-    // TODO: This will not work when having more than 2 animations
-    int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
-    int textureIndex{ offset + animationdata.frameIdx };
-    sprite.setTexture(textures[textureIndex]);
-
-    sprite.setOrigin(m_width / 2, m_height / 2);
-    sprite.setPosition(tileIdxToPos(tileIdx, camera));
-    setRot(effect.direction);
-    sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
-    drawByPixel = false;
-}
-
-void EntitySprite::updateSprite(castedSpellData& spellData, displayInput& camera)
-{
     if (spellData.spellType == SpellType::teleport) {
         updateTeleportAnimation(spellData, camera);
     }
-    else {
-        animationData& animationdata{ getAnimationData(spellData.id) };
-        // TODO: This will not work when having more than 2 animations
-        int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
-        int textureIndex{ offset + animationdata.frameIdx };
-        sprite.setTexture(textures[textureIndex]);
-        sprite.setOrigin(m_width / 2, m_height / 2);
+    // TODO: This will not work when having more than 2 animations
+    int offset{ animationdata.animationIdx ? animationLengths.at(0) : 0 };
+    int dirOffset { getTextureIndexDirOffset(dir) };
+    int textureIndex{ offset + dirOffset + animationdata.frameIdx };
+    sprite.setTexture(textures[textureIndex]);
 
-        setPos(spellData, camera);
-        sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
-    }
-}
+    sprite.setOrigin(m_width / 2, m_height / 2);
 
-void EntitySprite::addInstance(int id, animationData animationdata)
+    if (worldObjectType == WorldObjectType::player)
+        pos.second -= 14.f;
+
+    sprite.setPosition(tileIdxAndPosInTileToPos(tileIdx, pos, camera));
+    // TODO: You must add a way to differentiate between the two directional types.
+    if (worldObjectType != WorldObjectType::player)
+        setRot(dir);
+    int horizontalFlip{ (dir == directionType::downRight || dir == directionType::upRight) ? -1 : 1 };
+    sprite.setScale(sf::Vector2f(horizontalFlip * camera.zoom, camera.zoom));
+    pixelSprites.clear();
+    pixelAnimationStep = -1;
+    drawByPixel = false;
+}*/
+
+void WorldObjectSprite::addInstance(int id, animationData animationdata)
 {
     animationDataMap.insert({id, animationdata});
 }
 
-animationData& EntitySprite::getAnimationData(int id)
+animationData& WorldObjectSprite::getAnimationData(int id)
 {
     if (animationDataMap.find(id) == animationDataMap.end()) {
         // Couldn't find it so add it
@@ -483,7 +326,7 @@ animationData& EntitySprite::getAnimationData(int id)
     return animationDataMap[id];
 }
 
-void EntitySprite::draw(sf::RenderWindow& window)
+void WorldObjectSprite::draw(sf::RenderWindow& window)
 {
     if (drawByPixel) {
         for (auto& pixel : pixelSprites)
@@ -499,13 +342,13 @@ void EntitySprite::draw(sf::RenderWindow& window)
         window.draw(sprite);
 }
 
-void EntitySprite::draw(sf::RenderTexture& surface)
+void WorldObjectSprite::draw(sf::RenderTexture& surface)
 {
     surface.draw(sprite, &m_shader);
 }
 
 // Move this to a new file??
-void EntitySprite::updateTeleportAnimation(castedSpellData& spellData, displayInput& camera)
+void WorldObjectSprite::updateTeleportAnimation(castedSpellData& spellData, displayInput& camera)
 {
     if (pixelSprites.empty())
     {
