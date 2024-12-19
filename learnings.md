@@ -20,6 +20,10 @@ It needs to not spread to pixels that are already burnt, nor pixels that are tra
 So add information to the object which pixels that are burnt. Probably an 2d array or something, with enum if it's burnt, currently burning or neither.
 And have a common timer for when all currently burning pixels should spread and die.
 
+### Water simulation
+Ali had an idea of having the water wave information in a large texture. maybe it could have r and g as direction and b as height. Then it would be possible to have
+interaction with the water, so if a ball fall in the water waves will be created and spreading. I don't understand yet how edges of water tiles can be handled and how normals can be
+calculated to get the light reflection.
 
 After this is implemented the animation of it should be begun with
 

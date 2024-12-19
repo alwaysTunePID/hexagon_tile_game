@@ -32,7 +32,7 @@ public:
     void setPosFromTileIdx(TileIdx tileIdx, displayInput& camera);
     void updateFrameIdx();
     void updateWaterSurfaceTexture(Tile& tile, displayInput& camera);
-    void updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInput& camera, sf::Sprite& reflectionSprite, sf::RenderTexture& tileSurface, float timePast);
+    void updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInput& camera, worldPos& globalLightVec, sf::Sprite& reflectionSprite, sf::RenderTexture& tileSurface, float timePast);
     void updateSprite(Tile& tile, displayInput& camera);
     sf::Sprite& getSprite();
     void draw(sf::RenderWindow& window, Tile& tile);

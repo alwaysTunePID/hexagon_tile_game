@@ -135,7 +135,7 @@ void Graphics::drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& refle
                             tilesprite_p->updateWaterSurfaceTexture(tile, camera);
                             isFirstWaterTile = false;
                         }
-                        tilesprite_p->updateAndDraw(window, tile, camera, reflectionSprite, m_tileSurface, m_timePastForShader);
+                        tilesprite_p->updateAndDraw(window, tile, camera, m_globalLightVec, reflectionSprite, m_tileSurface, m_timePastForShader);
                     }
                     else
                     {

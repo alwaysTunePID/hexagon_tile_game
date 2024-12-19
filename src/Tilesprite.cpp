@@ -145,7 +145,7 @@ void Tilesprite::updateWaterSurfaceTexture(Tile& tile, displayInput& camera)
     textures.push_back(m_tileSurface.getTexture());
 }
 
-void Tilesprite::updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInput& camera, sf::Sprite& reflectionSprite, sf::RenderTexture& reflectionSurface, float timePastForShader)
+void Tilesprite::updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInput& camera, worldPos& globalLightVec, sf::Sprite& reflectionSprite, sf::RenderTexture& reflectionSurface, float timePastForShader)
 {
     // https://www.sfml-dev.org/tutorials/2.6/graphics-shape.php
     // https://thebookofshaders.com/13/
@@ -170,8 +170,16 @@ void Tilesprite::updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInpu
         sprite.setTexture(textures[1], resetRect);
         sprite.setTextureRect(sf::IntRect(0, 0, TILE_WIDTH * camera.zoom, TILE_HEIGHT * camera.zoom));
 
+        worldPos globalLightVecScreen{ NormalToScreenVec(globalLightVec) };
+        sf::Vector3f negScreenLightVec{
+            -static_cast<float>(globalLightVecScreen.x),
+            -static_cast<float>(globalLightVecScreen.y),
+            -static_cast<float>(globalLightVecScreen.z)
+        };
+
         m_shader.setUniform("texturee", sf::Shader::CurrentTexture);
         m_shader.setUniform("reflection", reflectionSurface.getTexture());
+        m_shader.setUniform("negScreenLightDir", negScreenLightVec);
         m_shader.setUniform("x_origin", sprite.getPosition().x - camera.horizontal);
         m_shader.setUniform("y_origin", sprite.getPosition().y - camera.vertical);
         m_shader.setUniform("WATER_COLOR", static_cast<sf::Glsl::Vec4>(WATER_COLOR));

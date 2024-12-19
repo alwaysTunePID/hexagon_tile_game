@@ -3,7 +3,6 @@
 
 #include "Enums.h"
 
-// TODO: This should be moved to it's own file
 inline worldVel InputToWorldVel(moveInput moveInput)
 {
     worldVel w_vel;
@@ -17,7 +16,6 @@ inline worldVel InputToWorldVel(moveInput moveInput)
     return w_vel;
 }
 
-// TODO: This should be moved to it's own file
 inline worldPos TileIdxToWorldPos(TileIdx tileIdx)
 {
     worldPos w_pos;
@@ -74,5 +72,35 @@ inline worldPos WorldToNormalVec(worldPos worldVec)
 
     return n_vec;
 }
+
+inline worldPos NormalToWorldVec(worldPos n_vec)
+{    
+    worldPos worldVec;
+
+    // Calculated inverse matrix using Python
+    float b1{ 0.55902 }; 
+    float b2{ 0.47492 }; 
+    float b3{ 0.82259 };
+    float b4{ 1.64518 }; 
+    float b5{ 0.84956 }; 
+
+    worldVec.x = static_cast<float>(n_vec.x * b1 + n_vec.y * b2 - n_vec.z * b3);
+    worldVec.y = static_cast<float>(n_vec.x * b1 - n_vec.y * b2 + n_vec.z * b3);
+    worldVec.z = static_cast<float>(               n_vec.y * b4 - n_vec.z * b5);
+
+    return worldVec;
+}
+
+inline worldPos NormalToScreenVec(worldPos n_vec)
+{    
+    worldPos s_vec;
+
+    s_vec.x =  n_vec.x;
+    s_vec.y = -n_vec.y;
+    s_vec.z = -n_vec.z;
+
+    return s_vec;
+}
+
 
 #endif
