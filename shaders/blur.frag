@@ -85,7 +85,7 @@ void main()
     vec4 pixel_ref = texture2D(reflection, vec2(x_w * TILE_SURFACE_WITDH / REFLECTION_WIDTH , 1.0 - (gl_TexCoord[0].y + z_w * amplitude) *  TILE_SURFACE_HEIGHT / REFLECTION_HEIGHT));
     pixel.a *= 0.8;
     //pixel_ref.a = pixel.a;
-    WATER_COLOR.a *= 0.8;
+    //WATER_COLOR.a *= 0.8;
 
     float z_normalized = (z_w - 0.2) / (z_max - 0.2); 
     vec4 height_color = vec4(0.0, z_normalized, 0.0, pixel.a);
@@ -98,8 +98,8 @@ void main()
     vec4 wave_n_color = vec4((wave_n + 1.0) * 0.5, pixel.a);
 
     float light_ref_scale = clamp(dot(wave_n, negScreenLightDir), 0.0, 1.0);
-    //vec4 water_and_ref = lerp(pixel, pixel_ref, reflection_factor); // Tried this but got too light blue water 
-    vec4 water_light_ref = lerp(pixel * pixel_ref, vec4(1.0, 1.0, 1.0, pixel.a), light_ref_scale); //mix
+    //vec4 water_and_ref = mix(pixel, pixel_ref, reflection_factor); // Tried this but got too light blue water 
+    vec4 water_light_ref = mix(pixel * pixel_ref, vec4(1.0, 1.0, 1.0, pixel.a), light_ref_scale); //mix
 
     //vec3 normal = normalize(vec3(dfdx, dfdy, 0.005));
     float grayScale = (dot(vec3(dfdx, dfdy, -0.0005), vec3(0.4, 0.8, -0.2)) + 1.0) * 0.5;

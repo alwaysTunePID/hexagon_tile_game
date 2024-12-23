@@ -2,6 +2,10 @@
 
 ## Todo
 
+## Compilation
+https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170 
+https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022 
+
 ## Coordinate Systems
 
 Input coordinates - should immediatelly be translated to world coordinates

@@ -45,8 +45,14 @@ int main()
         gameInput input{ xbox::none, actionType::none, move };
         displayInput dispInput{};
 
-        // Is joystick #0 connected?
-        //bool connected = sf::Joystick::isConnected(0);
+        float posX{};
+        float posY{};
+        float posZ{};
+        float posR{};
+        float posU{};
+        float posV{};
+
+        bool xboxConnected = sf::Joystick::isConnected(0);
 
         // How many buttons does joystick #0 support?
         //unsigned int buttons = sf::Joystick::getButtonCount(0);
@@ -111,15 +117,7 @@ int main()
                 }
             }*/
 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-            {
-                input.action = actionType::up;
-            }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-            {
-                input.action = actionType::down;
-            }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace))
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace))
             {
                 input.action = actionType::undoMove;
             }
@@ -130,6 +128,14 @@ int main()
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
             {
                 std::cout << "Pressed P " << std::endl;
+            }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+            {
+                posZ = -160.f;
+            }
+            else if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+            {
+                posZ = 160.f;
             }
             else if ((event.type == sf::Event::KeyReleased) && (event.key.code == sf::Keyboard::C))
             {
@@ -204,12 +210,49 @@ int main()
             }
         }
 
-        float posX = sf::Joystick::getAxisPosition(0, sf::Joystick::X);
-        float posY = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
-        float posZ = sf::Joystick::getAxisPosition(0, sf::Joystick::Z); // <- Zoom 
-        float posR = sf::Joystick::getAxisPosition(0, sf::Joystick::R);
-        float posU = sf::Joystick::getAxisPosition(0, sf::Joystick::U);
-        float posV = sf::Joystick::getAxisPosition(0, sf::Joystick::V);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+        {
+            posY = -100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+        {
+            posX = -100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+        {
+            posY = 100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            posX = 100.f;
+        }
+
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+        {
+            posV = -100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+        {
+            posU = -100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+        {
+            posV = 100.f;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+        {
+            posU = 100.f;
+        }
+
+        if (xboxConnected)
+        {
+            posX = sf::Joystick::getAxisPosition(0, sf::Joystick::X);
+            posY = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
+            posZ = sf::Joystick::getAxisPosition(0, sf::Joystick::Z); // <- Zoom 
+            posR = sf::Joystick::getAxisPosition(0, sf::Joystick::R);
+            posU = sf::Joystick::getAxisPosition(0, sf::Joystick::U);
+            posV = sf::Joystick::getAxisPosition(0, sf::Joystick::V);
+        }
 
         if (enableDebugPrint) // && (std::abs(posX) > 0.1 || std::abs(posY) > 0.1)
         {
@@ -219,6 +262,7 @@ int main()
         }
 
         double power{ std::sqrt(std::pow(posX, 2) + std::pow(posY, 2)) };
+        power = (power > 100.0) ? 100.0 : power;
         if (power > joyThreshLow){
             input.move.power = power / 200.0;
             input.move.angle = atan2(posY, posX);
