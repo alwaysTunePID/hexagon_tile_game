@@ -1,6 +1,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 #include <SFML/System/Time.hpp>
+#include <SFML/Network/UdpSocket.hpp>
 #include <math.h>
 #include "Enums.h"
 #include "ConfigParser.h"
@@ -9,6 +10,51 @@
 
 int main()
 {
+    sf::IpAddress recipient = sf::IpAddress::LocalHost; // getLocalAddress();  // my address on the local network
+    //sf::IpAddress a9 = sf::IpAddress::getPublicAddress(); // my address on the internet
+    unsigned short port = 54002;
+    unsigned short s_port = 54001;
+    bool serverAnswered{ true };
+
+    sf::UdpSocket socket;
+    socket.setBlocking(false);
+
+    // bind the socket to a port
+    if (socket.bind(port) != sf::Socket::Done)
+    {
+        std::cout << "ERROR - Binding sockett" << std::endl;
+    }
+
+    while (!serverAnswered)
+    {
+        char s_data[100] = "Helllooooo from Client!";
+
+        // Send
+        if (socket.send(s_data, 100, recipient, s_port) != sf::Socket::Done)
+        {
+            std::cout << "ERROR - Couldn't send data" << std::endl;
+        }
+
+        char r_data[100];
+        std::size_t received;
+
+        // Receive
+        sf::IpAddress sender;
+        unsigned short portt;
+        sf::Socket::Status status = socket.receive(r_data, 100, received, sender, portt);
+        if (status != sf::Socket::Done && status != sf::Socket::NotReady)
+        {
+            std::cout << "ERROR - Couldn't receive data" << std::endl;
+        }
+        else if (status = sf::Socket::Done)
+        {
+            //serverAnswered = true;
+            std::cout << "Received " << received << " bytes from " << sender << " on port " << portt << std::endl;       
+        }
+
+        sf::sleep(sf::milliseconds(100));
+    }
+
     double joyThreshHigh{ 0.0 };
     double joyThreshLow{ 0.0 };
     unsigned seed { 2952795 };

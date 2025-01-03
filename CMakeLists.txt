@@ -28,10 +28,17 @@ FetchContent_MakeAvailable(SFML)
 #)
 #target_compile_features(WizardClient PRIVATE cxx_std_17)
 
+add_executable(WizardClient src/HexagonClient.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/WorldObjectSprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
+target_link_libraries(WizardClient
+    sfml-graphics
+    sfml-network
+)
+target_compile_features(WizardClient PRIVATE cxx_std_17) 
 
-add_executable(WizardServer src/main.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/WorldObjectSprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
+add_executable(WizardServer src/HexagonServer.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Game.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
 target_link_libraries(WizardServer
     sfml-graphics
+    sfml-network
 )
 target_compile_features(WizardServer PRIVATE cxx_std_17) 
 
