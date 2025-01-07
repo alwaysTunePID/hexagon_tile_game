@@ -230,7 +230,7 @@ void Tilesprite::updateSprite(Tile& tile, displayInput& camera)
     switch (GetTextureType(type))
     {
     case textureType::directional:
-        textureIndex = frameIdx + 3 * tile.getMoveIdx() + 3 * 4 * static_cast<int>(tile.getDirection());
+        textureIndex = frameIdx + 3 * 4 * static_cast<int>(tile.getDirection());
         break;
 
     case textureType::normal:

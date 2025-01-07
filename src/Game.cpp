@@ -1,6 +1,7 @@
 #include <iostream>
 #include <chrono>
 #include <iostream>
+#include <unordered_set>
 #include "Enums.h"
 #include "Transformations.h"
 #include "Game.h"
@@ -9,8 +10,8 @@
 #include "Board.h"
 
 Game::Game(unsigned seed)
-    : tileId{ 0 }, effectId { 0 }, objectId { 0 }, players{}, worldObjects{}, effects{}, boardSize { 8 }, board{ boardSize },
-      state { stateType::lobby }, seed{seed}, updateCounter{}
+    : tileId{ 0 }, effectId { 0 }, objectId { 0 }, players{}, worldObjects{}, effects{}, tilesWithDelta{}, wosWithDelta{}, boardSize { 8 }, board{ boardSize },
+      state { stateType::lobby }, seed{seed}
 {
     castedSpellData castedSpell{};
     currentPlayer = 0;
@@ -27,8 +28,8 @@ void Game::createPlayer()
     uint16_t newPlayerId{ getNewObjectId() };
     TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(newPlayerId) };
 
-    WorldObject worldObject{ newPlayerId, WorldObjectType::player, TileIdxToWorldPos(tileIdx) };
-    worldObjects.insert({ newPlayerId, worldObject });
+    WorldObject worldObject{ newPlayerId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+    addWorldObject(worldObject);
 
     Player player{newPlayerId, tileIdx, &worldObjects };
     if (newPlayerId == 0)
@@ -50,19 +51,16 @@ void Game::removeAllPlayers()
 
 void Game::update(gameInput input, int playerId, double dt)
 {
-    updateCounter++;
+    tilesWithDelta.clear();
+    wosWithDelta.clear();
     //TODO: Temp hardcoding!
-    playerId = currentPlayer;
-    bool printCurrentRules {false};
+    //playerId = currentPlayer;
     //std::vector<Tile> playerBlocks {};
     //getPlayerBlocks(playerBlocks);
     directionType moveDirection{ GetDirectionType(input.action) };
     bool actionTaken{ false };
 
     isNextPlayerTurn = (input.action == actionType::skipTurn);
-
-    std::vector<std::vector<int>> textLines{};
-    std::vector<EffectType> textBlocks{};
 
     Player& player{ players[playerId] };
 
@@ -77,6 +75,7 @@ void Game::update(gameInput input, int playerId, double dt)
 
         if (player.isLJoyMode(LJoyMode::move))
         {
+            // TODO: You need to update position of all world objects somewhere
             bool moved{ false };
             moved = tryMove(player, dt);
             //std::cout << "dt: " << dt << std::endl;
@@ -136,20 +135,6 @@ void Game::update(gameInput input, int playerId, double dt)
             break;
         }
 
-        /*else if (input.action == actionType::undoMove)
-        {
-            if (blockHistory.size() > 1)
-            {
-                // This initial pop looks strange but it is because we pre-store states
-                blockHistory.pop_back();
-                std::pair<std::map<int, Tile>, Board> blockState{ blockHistory.back() };
-                blocks = blockState.first;
-                board = blockState.second;
-                blockHistory.pop_back();
-                actionTaken = true;
-            }
-        }*/
-
         updateCastedSpells();
 
         if (actionTaken || newLevel)
@@ -171,13 +156,6 @@ void Game::update(gameInput input, int playerId, double dt)
             player.updateTurnTime();
         }
 
-        // Debug stuff
-        /*
-        if (updateCounter % 20u == 0)
-        {
-            TileIdx playerTileIdx{ WorldPosToTileIdx(player.getWorldPos()) };
-            std::cout << "playerTileIdx: " << playerTileIdx.first << " " << playerTileIdx.second << std::endl;
-        }*/
         break;
 
     case stateType::lobby:
@@ -222,19 +200,19 @@ std::map<int, WorldObject>& Game::getWorldObjects()
     return worldObjects;
 }
 
+WorldObject& Game::getWorldObject(int id)
+{
+    return worldObjects[id];
+}
+
+void Game::setWorldObjectData(WorldObjectStruct& worldobject)
+{
+    worldObjects[worldobject.id].setAllData(worldobject);
+}
+
 Player& Game::getPlayer(int id)
 {
     return players[id];
-}
-
-gameEventType Game::getEvent()
-{
-    return event;
-}
-
-void Game::setEvent(gameEventType eventT)
-{
-    event = eventT;
 }
 
 void Game::addTile(Tile tile, TileIdx tileIdx)
@@ -250,6 +228,11 @@ void Game::removeAllTiles()
         board.removeTile(tile);
     }
     tiles.clear();
+}
+
+void Game::addWorldObject(WorldObject& worldObject)
+{
+    worldObjects.insert({ worldObject.getId(), worldObject });
 }
 
 bool Game::tryMove(Player& player, double dt)
@@ -336,30 +319,6 @@ void Game::killPlayer(Player& player)
     tiles[player.getSpawnTileId()].activateEffect(EffectType::spawn);
     player.setTileIdx(tiles[player.getSpawnTileId()].getTileIdx());
 }
-
-/*
-void Game::checkWinCondition()
-{
-    std::vector<Tile> playerBlocks{};
-    getPlayerBlocks(playerBlocks);
-    
-    for (Tile& player : playerBlocks)
-    {
-        std::vector<int> blocksOnSameTile{board.getTileIds(player.getTileIdx())};
-        for (int blockId : blocksOnSameTile)
-        {
-            if (tiles[blockId].hasEffect(EffectType::win))
-            {
-                players[currentPlayer].addPoint();
-                // TODO: Is this right?
-                nextPlayer();
-                // What was the purpose of gameEventType???
-                // setEvent(gameEventType::generateLevel);
-                state = stateType::generateLevel;
-            }
-        }
-    }
-}*/
 
 std::vector<castedSpellData>& Game::getCastedSpells()
 {
@@ -475,7 +434,6 @@ void Game::nextPlayer()
     currentPlayer = (currentPlayer == (numOfPlayers - 1)) ? 0 : currentPlayer + 1;
     players[currentPlayer].setCurrentPlayer(true);
     isNextPlayerTurn = false;
-    //blockHistory.clear();
     // TODO: Change name of this!
     newLevel = true;
 }
@@ -501,10 +459,7 @@ void Game::setState(stateType stateT)
 }
 
 void Game::storeState()
-{
-    std::pair<std::map<int, Tile>, Board> blockState{ blocks, board };
-    blockHistory.push_back(blockState);
-}*/
+{}*/
 
 bool Game::isOutOfBounds(TileIdx tileIdx)
 {
@@ -538,8 +493,8 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
     if (tile.getTileType() == tileType::mountain)
     {
         uint16_t id{ getNewObjectId() };
-        WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx) };
-        worldObjects.insert({ id, mountain });
+        WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+        addWorldObject(mountain);
     }
     else if (tile.getTileType() == tileType::grass)
     {
@@ -551,13 +506,13 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
             for (int ii{0}; ii < 4; ii++)
             {
                 uint16_t id{ getNewObjectId() };
-                WorldObject grass{ id, WorldObjectType::grass, TileIdxToWorldPos(tileIdx) };
+                WorldObject grass{ id, WorldObjectType::grass, TileIdxToWorldPos(tileIdx), &wosWithDelta };
                 worldPos w_pos{ grass.getPos() };
 
                 w_pos.x += (inc * i - 0.42 + dist(generator));
                 w_pos.y += (inc * ii - 0.42 + dist(generator)); 
                 grass.setPos(w_pos);
-                worldObjects.insert({ id, grass });
+                addWorldObject(grass);
                 // You thought you could flip every other grass here by setting a direction but then WorldObjectSprite will
                 // try to look for another texture as well...
             }
@@ -583,7 +538,7 @@ void Game::generateLevel()
                 continue;
 
             tileType type{ static_cast<tileType>(dist_objects(generator)) };            
-            Tile tile(type, getNewTileId());
+            Tile tile{ type, getNewTileId(), &tilesWithDelta };
 
             if (isASpawnTile(tileIdx))
             {
@@ -623,4 +578,135 @@ void Game::addEffect()
 {
     uint16_t id{ getNewEffectId() };
     //Fire(id, )
+}
+
+// Network
+void Game::getAllData(GameStruct& m) const
+{
+    for (auto& [id, tile] : tiles)
+    {
+        TileStruct tileS;
+        tile.getAllData(tileS);
+        m.tiles.insert({id, tileS});
+    }
+
+    m.currentPlayer  = currentPlayer;
+
+    for (auto& [id, player] : players)
+    {
+        PlayerStruct playerS;
+        player.getAllData(playerS);
+        m.players.insert({id, playerS});
+    }
+
+    for (auto& [id, worldObj] : worldObjects)
+    {
+        WorldObjectStruct worldObjectS;
+        worldObj.getAllData(worldObjectS);
+        m.worldObjects.insert({id, worldObjectS});
+    }
+
+    m.state = state;
+    m.boardSize = boardSize;
+    board.getAllData(m.board);
+}
+
+void Game::setAllData(GameStruct& m)
+{
+    tiles.clear();
+    for (auto& [id, tileS] : m.tiles)
+    {
+        Tile tile;
+        tile.setAllData(tileS);
+        tiles.insert({id, tile});
+    }
+
+    currentPlayer  = m.currentPlayer;
+
+    players.clear();
+    for (auto& [id, playerS] : m.players)
+    {
+        Player player;
+        player.setAllData(playerS);
+        players.insert({id, player});
+    }
+
+    worldObjects.clear();
+    for (auto& [id, worldObjectS] : m.worldObjects)
+    {
+        WorldObject worldObj;
+        worldObj.setAllData(worldObjectS);
+        worldObjects.insert({id, worldObj});
+    }
+
+    state = m.state;
+    boardSize = m.boardSize;
+    board.setAllData(m.board);
+}
+
+void Game::getDeltaData(GameStruct& m) const
+{
+    // TODO: Continue to make delta of everything
+    for (auto id : tilesWithDelta)
+    {
+        TileStruct tileS;
+        tiles.at(id).getAllData(tileS);
+        m.tiles.insert({id, tileS});
+    }
+
+    m.currentPlayer  = currentPlayer;
+
+    for (auto& [id, player] : players)
+    {
+        PlayerStruct playerS;
+        player.getAllData(playerS);
+        m.players.insert({id, playerS});
+    }
+
+    for (auto id : wosWithDelta)
+    {
+        WorldObjectStruct worldObjectS;
+        worldObjects.at(id).getAllData(worldObjectS);
+        m.worldObjects.insert({id, worldObjectS});
+    }
+
+    m.state = state;
+    m.boardSize = boardSize;
+    board.getAllData(m.board);
+}
+
+void Game::setDeltaData(GameStruct& m)
+{
+    // TODO: Continue to make delta of everything
+    for (auto& [id, tileS] : m.tiles)
+    {
+        // TODO: Continue to make delta. But for now, replace the element
+        tiles.erase(id);
+        Tile tile;
+        tile.setAllData(tileS);
+        tiles.insert({id, tile});
+    }
+
+    currentPlayer  = m.currentPlayer;
+
+    players.clear();
+    for (auto& [id, playerS] : m.players)
+    {
+        Player player;
+        player.setAllData(playerS);
+        players.insert({id, player});
+    }
+
+    for (auto& [id, worldObjectS] : m.worldObjects)
+    {
+        // TODO: Continue to make delta. But for now, replace the element
+        worldObjects.erase(id);
+        WorldObject worldObj;
+        worldObj.setAllData(worldObjectS);
+        worldObjects.insert({id, worldObj});
+    }
+
+    state = m.state;
+    boardSize = m.boardSize;
+    board.setAllData(m.board);
 }

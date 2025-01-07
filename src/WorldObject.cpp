@@ -1,12 +1,15 @@
+#include <unordered_set>
 #include "WorldObject.h"
 #include "Transformations.h"
 
-WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos)
-    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, effects{}
-{}
+WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta)
+    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, effects{}, wosWithDelta{ wosWithDelta }
+{
+    wosWithDelta->insert(id);
+}
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, dir{}, width{}, height{}, effects{}
+    : id{}, type{}, pos{}, vel{}, acc{}, dir{}, width{}, height{}, effects{}, wosWithDelta{}
 {}
 
 WorldObject::~WorldObject()
@@ -30,6 +33,8 @@ worldPos WorldObject::getPos()
 void WorldObject::setPos(worldPos w_pos)
 {
     pos = w_pos;
+    // Change so that this doesn't happen if pos is unchanged.
+    wosWithDelta->insert(id);
 }
 
 directionType WorldObject::getDir()
@@ -51,6 +56,7 @@ worldPos WorldObject::getUpdatedPos(double dt)
 void WorldObject::setVelocity(moveInput& move)
 {
     vel = InputToWorldVel(move);
+    wosWithDelta->insert(id);
 
     // TODO: Similar code in Board.cpp, move this?
     float ang1{ 0.983 };
@@ -80,4 +86,29 @@ void WorldObject::setVelocity(moveInput& move)
     {
         dir = directionType::upRight;
     }
+}
+
+void WorldObject::getAllData(WorldObjectStruct& m) const
+{
+    m.id     = id;
+    m.type   = type;
+    m.pos    = pos;
+    m.vel    = vel;
+    m.acc    = acc;
+    m.dir    = dir;
+    m.width  = width;
+    m.height = height;
+
+}
+
+void WorldObject::setAllData(WorldObjectStruct& m)
+{
+    id     = m.id;
+    type   = m.type;
+    pos    = m.pos;
+    vel    = m.vel;
+    acc    = m.acc;
+    dir    = m.dir;
+    width  = m.width;
+    height = m.height;
 }

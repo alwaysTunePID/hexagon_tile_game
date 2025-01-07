@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+constexpr bool DEBUG_LAUNCH { true };
+
 #define ROWS 12
 #define COLUMNS 20
 
@@ -47,18 +49,6 @@ typedef struct worldPos {
     double y;
     double z;
 } worldPos;
-
-typedef struct worldVel {
-    double x;
-    double y;
-    double z;
-} worldVel;
-
-typedef struct worldAcc {
-    double x;
-    double y;
-    double z;
-} worldAcc;
 
 typedef struct textureSize {
     uint16_t w;
@@ -565,11 +555,6 @@ enum class stateType
 {   playerTurn, 
     lobby, 
     generateLevel
-};
-
-enum class gameEventType
-{   generateLevel,
-    none
 };
 
 // ################# Input Stuff ######################

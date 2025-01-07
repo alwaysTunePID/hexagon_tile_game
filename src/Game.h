@@ -12,20 +12,30 @@
 #include "Player.h"
 #include "Fire.h"
 
+typedef struct GameStruct {
+    std::map<int, TileStruct> tiles;
+    int currentPlayer;
+    std::map<int, PlayerStruct> players;
+    std::map<int, WorldObjectStruct> worldObjects;
+    stateType state;
+    int boardSize;
+    BoardStruct board;
+} GameStruct;
+
 class Game
 {
-private:
+private:    
     std::map<int, Tile> tiles;
     int tileId;
     uint16_t effectId;
     uint16_t objectId;
-    std::vector<std::pair<std::map<int, Tile>,Board>> blockHistory;
     int currentPlayer;
     std::map<int, Player> players;
     std::map<int, WorldObject> worldObjects;
     std::map<int, Fire> effects;
+    std::unordered_set<int> tilesWithDelta;
+    std::unordered_set<int> wosWithDelta;
     stateType state;
-    gameEventType event{gameEventType::none};
     int boardSize;
     Board board;
     bool isNextPlayerTurn {false};
@@ -33,7 +43,6 @@ private:
     unsigned seed;
     std::default_random_engine generator;
     std::vector<castedSpellData> castedSpells;
-    uint64_t updateCounter;
 
 public:
     Game(unsigned seed);
@@ -47,11 +56,12 @@ public:
     Tile& getTile(TileIdx tileIdx);
     std::map<int, Player>& getPlayers();
     std::map<int, WorldObject>& getWorldObjects();
+    WorldObject& getWorldObject(int id);
+    void setWorldObjectData(WorldObjectStruct& worldobject);
     Player& getPlayer(int id);
-    gameEventType getEvent();
-    void setEvent(gameEventType event);
     void addTile(Tile tile, TileIdx tileIdx);
     void removeAllTiles();
+    void addWorldObject(WorldObject& worldObject);
     bool tryMove(Player& player, double dt);
     bool moveAim(Player& player, double dt);
     void executeProperties(Player& player);
@@ -80,6 +90,11 @@ public:
     bool isASpawnTile(TileIdx tileIdx);
     void setPlayersSpawnTiles();
     void addEffect();
+    // Network
+    void getAllData(GameStruct& m) const;
+    void setAllData(GameStruct& m);
+    void getDeltaData(GameStruct& m) const;
+    void setDeltaData(GameStruct& m);
 };
 
 #endif

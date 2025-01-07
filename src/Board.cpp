@@ -198,3 +198,16 @@ directionType Board::getNewTileDir(worldPos& pos)
     }*/
     return directionType::none;
 }
+
+// Network
+void Board::getAllData(BoardStruct& m) const
+{
+    m.size  = size;
+    m.tiles = tiles;
+}
+
+void Board::setAllData(BoardStruct& m)
+{
+    size  = m.size;
+    tiles = m.tiles;
+}

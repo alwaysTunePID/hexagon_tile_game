@@ -7,6 +7,13 @@
 #include "WorldObject.h"
 #include "Enums.h"
 
+typedef struct PlayerStruct {
+    int id;
+    int points;
+    int turnTime;
+    std::string name;
+} PlayerStruct;
+
 class Player
 {
 private:
@@ -18,7 +25,7 @@ private:
     PosInTile pos;
     VelInTile vel;
     worldPos w_pos;
-    worldVel w_vel;
+    worldPos w_vel;
     directionType dir;
     int spawnTileId;
     int deathCounter;
@@ -26,7 +33,7 @@ private:
     TileIdx aimTileIdx;
     PosInTile aimPos;
     VelInTile aimVel;
-    sf::Clock clock;   // <- change this so that server doesn't need SFML
+    sf::Clock clock;
     bool currentPlayer;
     LJoyMode lJoyMode;
     bool spellOngoing;
@@ -80,6 +87,9 @@ public:
     void setSpellOngoing(bool isOngoing);
     std::vector<SpellType>& getSelectionSpells();
     void increaseDeathCounter();
+    // Network
+    void getAllData(PlayerStruct& m) const;
+    void setAllData(PlayerStruct& m);
 };
 
 #endif

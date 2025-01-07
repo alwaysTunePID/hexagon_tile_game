@@ -6,6 +6,11 @@
 #include "Tile.h"
 #include "Enums.h"
 
+typedef struct BoardStruct {
+    int size; 
+    std::map<TileIdx, int> tiles;
+} BoardStruct;
+
 class Board
 {
 private:
@@ -25,6 +30,9 @@ public:
     void removeTile(Tile& tile);
     TileIdx Board::getInitTileIdxFromPlayerId(int id);
     directionType getNewTileDir(worldPos& pos);
+    // Network
+    void getAllData(BoardStruct& m) const;
+    void setAllData(BoardStruct& m);
 };
 
 #endif

@@ -2,8 +2,20 @@
 #define WORLDOBJECT_H
 
 #include <vector>
+#include <unordered_set>
 #include "Enums.h"
 #include "Fire.h"
+
+typedef struct WorldObjectStruct {
+    uint16_t id;
+    WorldObjectType type;
+    worldPos pos;
+    worldPos vel;
+    worldPos acc;
+    directionType dir;
+    uint16_t width;
+    uint16_t height;
+} WorldObjectStruct;
 
 class WorldObject
 {
@@ -11,15 +23,16 @@ private:
     uint16_t id;
     WorldObjectType type;
     worldPos pos;
-    worldVel vel;
-    worldAcc acc;
+    worldPos vel;
+    worldPos acc;
     directionType dir;
     uint16_t width;
     uint16_t height;
     std::vector<Fire> effects;
+    std::unordered_set<int>* wosWithDelta;
 
 public:
-    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos);
+    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta);
     WorldObject();
     ~WorldObject();
 
@@ -30,6 +43,8 @@ public:
     directionType getDir();
     worldPos getUpdatedPos(double dt);
     void setVelocity(moveInput& move);
+    void getAllData(WorldObjectStruct& m) const;
+    void setAllData(WorldObjectStruct& m);
 };
 
 #endif

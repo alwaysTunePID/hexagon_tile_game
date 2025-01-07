@@ -254,3 +254,20 @@ void Player::increaseDeathCounter()
 {
     deathCounter += 1;
 }
+
+// Network
+void Player::getAllData(PlayerStruct& m) const
+{
+    m.id       = id;
+    m.points   = points;
+    m.turnTime = turnTime;
+    m.name     = name;
+}
+
+void Player::setAllData(PlayerStruct& m)
+{
+    id       = m.id;
+    points   = m.points;
+    turnTime = m.turnTime;
+    name     = m.name;
+}

@@ -1,22 +1,16 @@
 #include <iostream>
 #include <stdexcept>
+#include <unordered_set>
 #include "Tile.h"
 
 Tile::Tile()
+    : id{}, tileIdx{}, dir{}, type{}, effect{}, active{}, highlighted{}, properties{}, tilesWithDelta{}
 {}
 
-Tile::Tile(tileType tileType, int idt)
+Tile::Tile(tileType tileType, int idt, std::unordered_set<int>* tilesWithDelta)
+    : id{ idt }, tileIdx{ 0, 0 }, dir{}, type{ tileType }, effect{}, active{ false }, highlighted{ false }, properties{}, tilesWithDelta{ tilesWithDelta }
 {
-    id = idt;
-    moveIdx = 0;
-    adjMask = 0;
-    active = false;
-    highlighted = false;
-    type = tileType;
-
-    tileIdx = { 0, 0 };
-
-    switch (GetTextureType(tileType))
+    switch (GetTextureType(type))
     {
     case textureType::directional:
         dir = directionType::up;
@@ -27,8 +21,8 @@ Tile::Tile(tileType tileType, int idt)
         break;
     }
 
-    properties = std::vector<effectData>{};
-    properties.push_back({GetInheritEffect(tileType), directionType::none});
+    properties.push_back({GetInheritEffect(type), directionType::none});
+    tilesWithDelta->insert(id);
 }
 
 
@@ -44,6 +38,7 @@ TileIdx Tile::getTileIdx()
 void Tile::setTileIdx(TileIdx tilet)
 {
     tileIdx = tilet;
+    tilesWithDelta->insert(id);
 }
 
 directionType Tile::getDirection()
@@ -54,26 +49,7 @@ directionType Tile::getDirection()
 void Tile::setDirection(directionType direction)
 {
     dir = direction;
-}
-
-int Tile::getAdjMask()
-{
-    return adjMask;
-}
-
-void Tile::setAdjMask(int adjMaskT)
-{
-    adjMask = adjMaskT;
-}
-
-int Tile::getMoveIdx()
-{
-    return moveIdx;
-}
-
-void Tile::setMoveIdx(int moveIdxt)
-{
-    moveIdx = moveIdxt;
+    tilesWithDelta->insert(id);
 }
 
 bool Tile::isActive()
@@ -84,6 +60,7 @@ bool Tile::isActive()
 void Tile::setActive(bool activeT)
 {
     active = activeT;
+    tilesWithDelta->insert(id);
 }
 
 bool Tile::isHighlighted()
@@ -94,11 +71,7 @@ bool Tile::isHighlighted()
 void Tile::setHighlighted(bool highlightedT)
 {
     highlighted = highlightedT;
-}
-
-void Tile::increaseMoveIdx()
-{
-    moveIdx = (moveIdx == 3) ? 0 : moveIdx + 1;
+    tilesWithDelta->insert(id);
 }
 
 tileType Tile::getTileType()
@@ -125,6 +98,8 @@ void Tile::setBlockType(tileType blocktype)
     {
         dir = directionType::up;
     }
+
+    tilesWithDelta->insert(id);
 }
 
 int Tile::getId()
@@ -147,6 +122,7 @@ void Tile::activateEffect(EffectType effectType)
         if (effect.type == effectType)
         {
             effect.active = true;
+            tilesWithDelta->insert(id);
             return;
         }
     }
@@ -159,6 +135,7 @@ void Tile::deactivateEffect(EffectType effectType)
         if (effect.type == effectType)
         {
             effect.active = false;
+            tilesWithDelta->insert(id);
             return;
         }
     }
@@ -167,6 +144,7 @@ void Tile::deactivateEffect(EffectType effectType)
 void Tile::addEffect(effectData effect)
 {
     properties.push_back(effect);
+    tilesWithDelta->insert(id);
 }
 
 std::vector<effectData>& Tile::getProperties()
@@ -177,4 +155,28 @@ std::vector<effectData>& Tile::getProperties()
 void Tile::clearProperties()
 {
     properties.clear();
+    tilesWithDelta->insert(id);
+}
+
+// Network
+void Tile::getAllData(TileStruct& m) const
+{
+    m.id          = id;
+    m.tileIdx     = tileIdx;
+    m.dir         = dir;
+    m.type        = type;
+    m.effect      = effect;
+    m.active      = active;
+    m.highlighted = highlighted;
+}
+
+void Tile::setAllData(TileStruct& m)
+{
+    id          = m.id;
+    tileIdx     = m.tileIdx;
+    dir         = m.dir;
+    type        = m.type;
+    effect      = m.effect;
+    active      = m.active;
+    highlighted = m.highlighted;
 }

@@ -196,7 +196,6 @@ int main(int argc, char** argv) {
 
     while (window.isOpen())
     {
-        bool printCurrentRules{ false };
         actionType action{ actionType::none };
 
         for (auto event = sf::Event{}; window.pollEvent(event);)
@@ -225,10 +224,6 @@ int main(int argc, char** argv) {
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace))
             {
                 action = actionType::undoMove;
-            }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
-            {
-                printCurrentRules = true;
             }
             else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
             {

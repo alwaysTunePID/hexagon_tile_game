@@ -39,3 +39,14 @@ https://learnwebgl.brown37.net/12_shader_language/glsl_builtin_functions.html
 
 ## Graphics
  If you need a depth buffer for 3D rendering, don't forget to request it when calling RenderTexture::create
+
+## Measurements
+Sending whole game:
+21244 bytes
+ 1565 bytes after adding delta to worldObjects
+  650 bytes after adding delta to tiles as well
+
+Clients active time period: 0.02
+Server  active time period: 0.0003
+So server is 67 times as fast
+60 fps => 0.016 period time

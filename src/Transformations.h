@@ -3,9 +3,9 @@
 
 #include "Enums.h"
 
-inline worldVel InputToWorldVel(moveInput moveInput)
+inline worldPos InputToWorldVel(moveInput moveInput)
 {
-    worldVel w_vel;
+    worldPos w_vel;
     double screen_x = moveInput.power * std::cos(-moveInput.angle);
     double neg_screen_y = moveInput.power * std::sin(-moveInput.angle);
 
