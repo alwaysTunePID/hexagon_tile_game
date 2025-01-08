@@ -28,6 +28,7 @@ private:
     directionType dir;
     uint16_t width;
     uint16_t height;
+    bool moving;
     std::vector<Fire> effects;
     std::unordered_set<int>* wosWithDelta;
 
@@ -42,6 +43,7 @@ public:
     void setPos(worldPos w_pos);
     directionType getDir();
     worldPos getUpdatedPos(double dt);
+    bool isMoving();
     void setVelocity(moveInput& move);
     void getAllData(WorldObjectStruct& m) const;
     void setAllData(WorldObjectStruct& m);

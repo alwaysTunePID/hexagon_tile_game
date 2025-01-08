@@ -3,13 +3,13 @@
 #include "Transformations.h"
 
 WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta)
-    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, effects{}, wosWithDelta{ wosWithDelta }
+    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, moving{ false }, effects{}, wosWithDelta{ wosWithDelta }
 {
     wosWithDelta->insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, dir{}, width{}, height{}, effects{}, wosWithDelta{}
+    : id{}, type{}, pos{}, vel{}, acc{}, dir{}, width{}, height{}, moving{}, effects{}, wosWithDelta{}
 {}
 
 WorldObject::~WorldObject()
@@ -52,11 +52,20 @@ worldPos WorldObject::getUpdatedPos(double dt)
     return updatedPos;
 }
 
+bool WorldObject::isMoving()
+{
+    return moving;
+}
+
 // Not completely sure if this should be here instead of in Player
 void WorldObject::setVelocity(moveInput& move)
 {
     vel = InputToWorldVel(move);
     wosWithDelta->insert(id);
+
+    // Temp: Got linking problems when trying to make this a function somewhere
+    double epsilon = 0.0001;
+    moving = !(std::fabs(vel.x) < epsilon && std::fabs(vel.y) < epsilon && std::fabs(vel.z) < epsilon);
 
     // TODO: Similar code in Board.cpp, move this?
     float ang1{ 0.983 };

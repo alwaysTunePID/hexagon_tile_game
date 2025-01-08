@@ -70,23 +70,21 @@ void Game::update(gameInput input, int playerId, double dt)
     {
     case stateType::playerTurn:
 
-        if (playerId != currentPlayer)
-            return;
+        //if (playerId != currentPlayer)
+        //    return;
 
         if (player.isLJoyMode(LJoyMode::move))
         {
             // TODO: You need to update position of all world objects somewhere
             bool moved{ false };
-            moved = tryMove(player, dt);
-            //std::cout << "dt: " << dt << std::endl;
+            // moved = tryMove(player, dt);
             if (moved)
             {
                 executeProperties(player);
             }
             player.setVelocity(input.move);
         }
-
-        if (player.isLJoyMode(LJoyMode::aim))
+        else if (player.isLJoyMode(LJoyMode::aim))
         {
             //TileIdx fromTile{ player.getAimTileIdx() };
             //TileIdx toTile{ board.getTileInFront(fromTile, moveDirection) };
@@ -135,6 +133,7 @@ void Game::update(gameInput input, int playerId, double dt)
             break;
         }
 
+        updatePosOfWorldObjects(dt);
         updateCastedSpells();
 
         if (actionTaken || newLevel)
@@ -360,6 +359,20 @@ void Game::castSpell()
         castedSpell.startTime = startTime;
         castedSpell.traveledPerc = 0.0;
         castedSpells.push_back(castedSpell);
+    }
+}
+
+void Game::updatePosOfWorldObjects(double dt)
+{
+    worldPos pos;
+    for (auto& [id, worldObject] : worldObjects)
+    {
+        if (worldObject.isMoving())
+        {
+            pos = worldObject.getUpdatedPos(dt);
+            worldObject.setPos(pos);
+        }
+
     }
 }
 

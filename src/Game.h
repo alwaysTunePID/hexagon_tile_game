@@ -70,6 +70,7 @@ public:
     std::vector<castedSpellData>& getCastedSpells();
     int getNewSpellId();
     void castSpell();
+    void updatePosOfWorldObjects(double dt);
     void updateCastedSpells();
     void executeSpell(castedSpellData& spell);
     void affectWorldObject(castedSpellData& spell);

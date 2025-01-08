@@ -102,5 +102,10 @@ inline worldPos NormalToScreenVec(worldPos n_vec)
     return s_vec;
 }
 
+/*
+bool IsZero(worldPos vec, double epsilon = 0.0001)
+{
+    return std::fabs(vec.x) < epsilon && std::fabs(vec.y) < epsilon && std::fabs(vec.z) < epsilon;
+}*/
 
 #endif
