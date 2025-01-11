@@ -59,7 +59,8 @@ sf::Packet& operator <<(sf::Packet& packet, const WorldObjectStruct& m)
 {
     // TODO: add handling of this member: std::vector<Fire> effects
     return packet << m.id << (sf::Int8)m.type << m.pos << m.vel
-                  << m.acc << (sf::Int8)m.dir << m.width << m.height;
+                  << m.acc << (sf::Int8)m.dir << m.width << m.height
+                  << m.origin.x << m.origin.y;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m)
@@ -68,7 +69,8 @@ sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m)
     sf::Int8 dir;
 
     packet = packet >> m.id >> type >> m.pos >> m.vel
-                    >> m.acc >> dir >> m.width >> m.height;
+                    >> m.acc >> dir >> m.width >> m.height
+                    >> m.origin.x >> m.origin.y;
 
     m.type = (WorldObjectType)type;
     m.dir = (directionType)dir;

@@ -365,14 +365,48 @@ void Game::castSpell()
 void Game::updatePosOfWorldObjects(double dt)
 {
     worldPos pos;
+
+    // Todo: Need to handle grass in a better way
+    std::vector<int> interacWOIds{};
     for (auto& [id, worldObject] : worldObjects)
     {
+        if (worldObject.getType() != WorldObjectType::grass)
+        {
+            interacWOIds.push_back(id);
+        }
+    }
+
+    std::vector<int> movedWorldObjects{};
+    for (auto& id : interacWOIds)
+    {
+        auto& worldObject{ worldObjects.at(id) };
         if (worldObject.isMoving())
         {
             pos = worldObject.getUpdatedPos(dt);
             worldObject.setPos(pos);
+            movedWorldObjects.push_back(id);
         }
+    }
 
+    std::vector<int> handledIds{};
+    for(int id : movedWorldObjects)
+    {
+        auto& worldObject{ worldObjects.at(id) };
+
+        for (auto& id2 : interacWOIds)
+        {
+            if (id2 == id || std::find(handledIds.begin(), handledIds.end(), id2) != handledIds.end())
+                continue;
+
+            auto& worldObject2{ worldObjects.at(id2) };
+            if (worldObject.isIntersecting(worldObject2))
+            {
+                //std::cout << "Collision between: " << ToString(worldObject.getType()) << " " << ToString(worldObject2.getType()) << std::endl; 
+                moveInput zeroVel{ 0.f, 0 };
+                worldObject.setVelocity(zeroVel);
+            }
+        }
+        handledIds.push_back(id);
     }
 }
 

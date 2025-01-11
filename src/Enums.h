@@ -304,6 +304,19 @@ inline textureSize GetSize(WorldObjectType objectType, int id)
     }
 }
 
+inline sf::Vector2f GetHitbox(WorldObjectType objectType)
+{
+    switch (objectType)
+    {
+        case WorldObjectType::player:
+            return {14.f, 28.f};
+        case WorldObjectType::mountain:
+            return {44.f, 44.f - 12.5f};
+        default:
+            return {1.f, 1.f};
+    }
+}
+
 inline bool IsDirectional(SpellType spell)
 {
     switch (spell)

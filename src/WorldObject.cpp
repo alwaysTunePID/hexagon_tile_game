@@ -1,15 +1,20 @@
 #include <unordered_set>
+#include <cmath>
 #include "WorldObject.h"
 #include "Transformations.h"
 
+// Todo  38.f was derived through testing just. Magick number
 WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta)
-    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, dir{ GetInitDir(type) }, width{}, height{}, moving{ false }, effects{}, wosWithDelta{ wosWithDelta }
+    : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
+      width{ GetHitbox(type).x / 38.f },
+      height{ GetHitbox(type).y / 38.f },
+      origin{}, moving{ false }, effects{}, wosWithDelta{ wosWithDelta }
 {
     wosWithDelta->insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, dir{}, width{}, height{}, moving{}, effects{}, wosWithDelta{}
+    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, effects{}, wosWithDelta{}
 {}
 
 WorldObject::~WorldObject()
@@ -33,6 +38,7 @@ worldPos WorldObject::getPos()
 void WorldObject::setPos(worldPos w_pos)
 {
     pos = w_pos;
+    tileIdx = WorldPosToTileIdx(w_pos);
     // Change so that this doesn't happen if pos is unchanged.
     wosWithDelta->insert(id);
 }
@@ -40,6 +46,16 @@ void WorldObject::setPos(worldPos w_pos)
 directionType WorldObject::getDir()
 {
     return dir;
+}
+
+float WorldObject::getWidth()
+{
+    return width;
+}
+
+float WorldObject::getHeight()
+{
+    return height;
 }
 
 worldPos WorldObject::getUpdatedPos(double dt)
@@ -55,6 +71,38 @@ worldPos WorldObject::getUpdatedPos(double dt)
 bool WorldObject::isMoving()
 {
     return moving;
+}
+
+bool WorldObject::isIntersecting(WorldObject& worldObject)
+{
+    // Assume Cylinder shape, without rotations
+    bool intersecting{ false };
+    worldPos inPos{ worldObject.getPos() };
+    float d{ float(pow(inPos.x - pos.x, 2) + pow(inPos.y - pos.y, 2)) };
+    float r_sum{ float(pow((worldObject.getWidth() + width) / 2.f, 2)) };
+
+    if (d < r_sum)
+    {
+        if (inPos.z < pos.z)
+        {
+            if ((inPos.z + worldObject.getHeight()) > pos.z)
+                intersecting = true;
+        }
+        else
+        {
+            if (inPos.z < (pos.z + height))
+                intersecting = true;
+        }
+
+        if (intersecting)
+        {
+            float len{ std::sqrt(d) };
+            float okLen{ std::sqrt(r_sum) };
+            pos.x = inPos.x + (pos.x - inPos.x) * (okLen / len);
+            pos.y = inPos.y + (pos.y - inPos.y) * (okLen / len);
+        }
+    }
+    return intersecting;
 }
 
 // Not completely sure if this should be here instead of in Player
@@ -107,6 +155,7 @@ void WorldObject::getAllData(WorldObjectStruct& m) const
     m.dir    = dir;
     m.width  = width;
     m.height = height;
+    m.origin = origin;
 
 }
 
@@ -120,4 +169,5 @@ void WorldObject::setAllData(WorldObjectStruct& m)
     dir    = m.dir;
     width  = m.width;
     height = m.height;
+    origin = m.origin;
 }

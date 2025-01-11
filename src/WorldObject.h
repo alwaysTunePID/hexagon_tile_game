@@ -13,8 +13,9 @@ typedef struct WorldObjectStruct {
     worldPos vel;
     worldPos acc;
     directionType dir;
-    uint16_t width;
-    uint16_t height;
+    float width;
+    float height;
+    sf::Vector2f origin;
 } WorldObjectStruct;
 
 class WorldObject
@@ -25,9 +26,11 @@ private:
     worldPos pos;
     worldPos vel;
     worldPos acc;
+    TileIdx tileIdx;
     directionType dir;
-    uint16_t width;
-    uint16_t height;
+    float width;
+    float height;
+    sf::Vector2f origin;
     bool moving;
     std::vector<Fire> effects;
     std::unordered_set<int>* wosWithDelta;
@@ -42,8 +45,11 @@ public:
     worldPos getPos();
     void setPos(worldPos w_pos);
     directionType getDir();
+    float getWidth();
+    float getHeight();
     worldPos getUpdatedPos(double dt);
     bool isMoving();
+    bool isIntersecting(WorldObject& worldObject);
     void setVelocity(moveInput& move);
     void getAllData(WorldObjectStruct& m) const;
     void setAllData(WorldObjectStruct& m);

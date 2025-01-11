@@ -2,7 +2,8 @@
 
 ## Todo
 - Test on different devices and see the lag. Test the suggestion of updating the position of the player localy and then smooth in the response from the server.
-- Add collision detection
+- When moving keep track which tile idx the object is in. Make WorldPosToTileIdx better. Implement a tryMove(Player& player, double dt) to worldObjects
+- Optimize collision detection
 - Implement shooting of fireballs again (simple animation to begin with)
 - Fire and smoke as particle simulations on the GPU
 
