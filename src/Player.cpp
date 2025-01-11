@@ -24,7 +24,7 @@ Player::Player(int id, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects
     selectionSpells.push_back(SpellType::wind);
     selectionSpells.push_back(SpellType::teleport);
 
-    std::cout << "World pos player " << id << ":" << w_pos.x << " " << w_pos.y << std::endl; 
+    //std::cout << "World pos player " << id << ":" << w_pos.x << " " << w_pos.y << std::endl; 
 }
 
 Player::Player(int points, int turnTime, int id, bool currentPlayer)

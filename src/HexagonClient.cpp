@@ -16,7 +16,8 @@ bool showCoordinateSystem{ false };
 bool enableShaders{ false };
 int  tileSpacingIgnoreCounter{ 0 };
 
-int playerId{ 0 };
+std::string name;
+sf::Uint8 playerId{ 0 };
 double joyThreshHigh{ 0.0 };
 double joyThreshLow{ 0.0 };
 unsigned seed { 2952795 };
@@ -223,18 +224,21 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
     bool serverAnswered{ false };
     while (!serverAnswered)
     {
-        char s_data[100] = "Helllooooo from Client!";
-
-        if (socket.send(s_data, 100, serverIp, serverPort) != sf::Socket::Status::Done)
+        sf::Packet packet;
+        std::cout << "Enter Wizard Name:" << std::endl;
+        std::cin >> name;
+        packet << name;
+        if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done)
         {
             std::cout << "ERROR - Couldn't send data" << std::endl;
         }
 
-        sf::Uint8 r_data[100];
-        std::size_t received;
+        //sf::Uint8 r_data[100];
+        //std::size_t received;
         sf::IpAddress sender;
         unsigned short senderPort;
-        sf::Socket::Status status = socket.receive(r_data, 100, received, sender, senderPort);
+        //sf::Socket::Status status = socket.receive(r_data, 100, received, sender, senderPort);
+        sf::Socket::Status status = socket.receive(packet, sender, senderPort);
         if (status != sf::Socket::Status::Done && status != sf::Socket::Status::NotReady)
         {
             std::cout << "ERROR - Couldn't receive data" << std::endl;
@@ -245,7 +249,8 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
                 continue;
 
             serverAnswered = true;
-            playerId = r_data[0];
+            packet >> playerId;
+            //playerId = r_data[0];
             std::cout << "Player id: " << playerId << std::endl;
             std::cout <<  "Waiting for other wizards" << std::endl;     
         }
@@ -259,11 +264,16 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
     bool waitForAllToConnect{ true };
     while (waitForAllToConnect)
     {
-        char r_data[100];
-        std::size_t received;
+        sf::Packet packet;
+        packet << name;
+        if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done)
+        {
+            std::cout << "ERROR - Couldn't send data" << std::endl;
+        }
+
         sf::IpAddress sender;
         unsigned short senderPort;
-        sf::Socket::Status status = socket.receive(r_data, 100, received, sender, senderPort);
+        sf::Socket::Status status = socket.receive(packet, sender, senderPort);
         if (status != sf::Socket::Status::Done && status != sf::Socket::Status::NotReady)
         {
             std::cout << "ERROR - Couldn't receive data" << std::endl;
@@ -273,20 +283,25 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
             if (sender != serverIp)
                 continue;
 
-            if (r_data[0] == 'r')
+            std::string gameStatus;
+            if (packet >> gameStatus)
             {
-                waitForAllToConnect = false;
-                std::cout << "Let the game begin!" << std::endl;   
+                std::cout << "Got message: " << gameStatus << std::endl;
+                if (gameStatus == "Ready")
+                {
+                    waitForAllToConnect = false;
+                    std::cout << "Let the game begin!" << std::endl;  
+                }
             }    
         }
-        sf::sleep(sf::milliseconds(100));
+        sf::sleep(sf::milliseconds(10));
     }
 }
 
 ///////////////// Main /////////////////////////////////
 int main()
 {
-    serverIp = sf::IpAddress::LocalHost; // getLocalAddress();  // my address on the local network
+    serverIp = sf::IpAddress::LocalHost; // sf::IpAddress::getLocalAddress();  // my address on the local network
     //sf::IpAddress a9 = sf::IpAddress::getPublicAddress(); // my address on the internet
     unsigned short port{ 55002 };
     sf::UdpSocket  socket;
@@ -295,7 +310,7 @@ int main()
     // bind the socket to a port
     for (size_t i{ 0 }; i < 10; i++)
     {
-        if (socket.bind(port, sf::IpAddress::LocalHost) == sf::Socket::Status::Done)
+        if (socket.bind(port) == sf::Socket::Status::Done) //sf::IpAddress::LocalHost
             break;
         if (i == 9)
             std::cout << "ERROR - Binding sockett" << std::endl;

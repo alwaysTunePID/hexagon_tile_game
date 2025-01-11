@@ -11,6 +11,7 @@
 typedef struct clientData {
     sf::IpAddress ip;
     unsigned short port;
+    std::string name;
     bool needsAllData;
     bool connected;
 } clientData;
@@ -26,42 +27,52 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
 {
     while(clients.size() != numOfPlayers)
     {
-        char r_data[100];
-        std::size_t received{ 0 };
+        std::string gameStatus{ "Waiting" };
+        sf::Packet packet;
+        //char r_data[100];
+        //std::size_t received{ 0 };
         sf::IpAddress sender;
         unsigned short clientPort;
 
-        sf::Socket::Status status = socket.receive(r_data, (std::size_t)100, received, sender, clientPort);
+        //sf::Socket::Status status = socket.receive(r_data, (std::size_t)100, received, sender, clientPort);
+        sf::Socket::Status status = socket.receive(packet, sender, clientPort);
         if (status != sf::Socket::Status::Done && status != sf::Socket::Status::NotReady)
         {
             std::cout << "ERROR - Couldn't receive data" << std::endl;
         }
         else if (status == sf::Socket::Status::Done)
         {
-            bool isNewClient{ true };
-            for (auto& [id, clientdata] : clients)
+            std::string name;
+            if (packet >> name)
             {
-                if (clientdata.ip == sender && clientdata.port == clientPort)
+                bool isNewClient{ true };
+                for (auto& [id, clientdata] : clients)
                 {
-                    isNewClient = false;
-                    break;
+                    if (clientdata.ip == sender && clientdata.port == clientPort && clientdata.name == name)
+                    {
+                        packet.clear();
+                        packet << gameStatus;
+                        if (socket.send(packet, sender, clientPort) != sf::Socket::Status::Done)
+                            std::cout << "ERROR - Couldn't send data" << std::endl;
+                        isNewClient = false;
+                        break;
+                    }
                 }
-            }
 
-            if (isNewClient)
-            {
-                size_t id{ clients.size() };
-                clientData clientdata{ sender, clientPort, true, true};
-                clients.insert({ id, clientdata });
-                game.createPlayer();
-                std::cout << clients.size() << " players connected" << std::endl;
-
-                //char s_data[100] = "Waiting for other wizards";
-                sf::Uint8 s_data[100];
-                s_data[0] = id;
-                if (socket.send(s_data, 100, sender, clientPort) != sf::Socket::Status::Done)
+                if (isNewClient)
                 {
-                    std::cout << "ERROR - Couldn't send data" << std::endl;
+                    size_t id{ clients.size() };
+                    clientData clientdata{ sender, clientPort, name, true, true};
+                    clients.insert({ id, clientdata });
+                    game.createPlayer();
+                    std::cout << name << " connected. (" << clients.size() << "/" << numOfPlayers << ")" << std::endl;
+
+                    packet.clear();
+                    packet << (sf::Uint8)id;
+                    if (socket.send(packet, sender, clientPort) != sf::Socket::Status::Done)
+                    {
+                        std::cout << "ERROR - Couldn't send data" << std::endl;
+                    }
                 }
             }
         }
@@ -70,13 +81,13 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
 
 void sendToAllClientsThatGameWillBegin(sf::UdpSocket& socket)
 {
-    char s_data[100] = "r";
+    std::string gameStatus{ "Ready" };
+    sf::Packet packet;
+    packet << gameStatus;
     for (auto& [id, clientdata] : clients)
     {
-        if (socket.send(s_data, 100, clientdata.ip, clientdata.port) != sf::Socket::Status::Done)
-        {
+        if (socket.send(packet, clientdata.ip, clientdata.port) != sf::Socket::Status::Done)
             std::cout << "ERROR - Couldn't send data" << std::endl;
-        }
     }
 
     std::cout << "Let the game begin!" << std::endl;
@@ -96,7 +107,7 @@ int main()
     sf::UdpSocket socket;
     socket.setBlocking(true);
     // Change this!!
-    serverIp = sf::IpAddress::LocalHost;
+    serverIp = sf::IpAddress::getLocalAddress(); // sf::IpAddress::LocalHost;
 
     // bind the socket to a port
     if (socket.bind(port, serverIp) != sf::Socket::Status::Done)
@@ -108,7 +119,8 @@ int main()
         std::cout << "Debug Launch\n" << std::endl;
     else
     {
-        std::cout << "This is the server IP that the clients need to enter:\n" << serverIp.toString() << std::endl;
+        //std::cout << "Private IP: " << serverIp.toString() << std::endl;
+        std::cout << "This is the server IP that the clients need to enter:\n" << sf::IpAddress::getPublicAddress() << std::endl;
         std::cout << "Enter number of players (E.g. 2):" << std::endl;
         std::cin >> numOfPlayers;
     }
