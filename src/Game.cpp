@@ -23,7 +23,7 @@ Game::~Game()
 {
 }
 
-void Game::createPlayer()
+void Game::createPlayer(std::string name)
 {
     uint16_t newPlayerId{ getNewObjectId() };
     TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(newPlayerId) };
@@ -31,7 +31,7 @@ void Game::createPlayer()
     WorldObject worldObject{ newPlayerId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &wosWithDelta };
     addWorldObject(worldObject);
 
-    Player player{newPlayerId, tileIdx, &worldObjects };
+    Player player{newPlayerId, name, tileIdx, &worldObjects };
     if (newPlayerId == 0)
         player.setCurrentPlayer(true);
     players.insert({newPlayerId, player});

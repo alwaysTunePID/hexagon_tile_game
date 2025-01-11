@@ -48,7 +48,7 @@ public:
     Game(unsigned seed);
     ~Game();
 
-    void createPlayer();
+    void createPlayer(std::string name);
     void addPlayer(Player player);
     void removeAllPlayers();
     void update(gameInput input, int playerId, double dt);

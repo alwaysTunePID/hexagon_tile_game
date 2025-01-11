@@ -45,13 +45,14 @@ private:
 
 public:
     Player();
-    Player(int id, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
+    Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
     Player(int points, int turnTime, int id, bool currentPlayer);
     ~Player();
 
     void addPoint();
     int getPoints();
     std::string getName();
+    void setName(std::string newName);
     int getId();
     TileIdx& getTileIdx();
     void setTileIdx(TileIdx tileIdxt);

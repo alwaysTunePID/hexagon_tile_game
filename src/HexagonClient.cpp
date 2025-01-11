@@ -225,8 +225,22 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
     while (!serverAnswered)
     {
         sf::Packet packet;
-        std::cout << "Enter Wizard Name:" << std::endl;
-        std::cin >> name;
+        if (!DEBUG_LAUNCH)
+        {
+            std::cout << "Enter Wizard Name:" << std::endl;
+            std::cin >> name;
+        }
+        else
+        {
+            // Ugly
+            unsigned short port{socket.getLocalPort()}; 
+            if (port == 55002U)
+                name = "Grimnir";
+            else if (port == 55003U)
+                name = "Vlad";
+            else
+                name = "Khan";
+        }
         packet << name;
         if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done)
         {
@@ -251,7 +265,7 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
             serverAnswered = true;
             packet >> playerId;
             //playerId = r_data[0];
-            std::cout << "Player id: " << playerId << std::endl;
+            std::cout << "Player id: " << (int)playerId << std::endl;
             std::cout <<  "Waiting for other wizards" << std::endl;     
         }
 
@@ -286,7 +300,6 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
             std::string gameStatus;
             if (packet >> gameStatus)
             {
-                std::cout << "Got message: " << gameStatus << std::endl;
                 if (gameStatus == "Ready")
                 {
                     waitForAllToConnect = false;
@@ -301,8 +314,7 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
 ///////////////// Main /////////////////////////////////
 int main()
 {
-    serverIp = sf::IpAddress::LocalHost; // sf::IpAddress::getLocalAddress();  // my address on the local network
-    //sf::IpAddress a9 = sf::IpAddress::getPublicAddress(); // my address on the internet
+    serverIp = sf::IpAddress::getPublicAddress(); // sf::IpAddress::LocalHost
     unsigned short port{ 55002 };
     sf::UdpSocket  socket;
     socket.setBlocking(true);
@@ -310,7 +322,7 @@ int main()
     // bind the socket to a port
     for (size_t i{ 0 }; i < 10; i++)
     {
-        if (socket.bind(port) == sf::Socket::Status::Done) //sf::IpAddress::LocalHost
+        if (socket.bind(port) == sf::Socket::Status::Done) // sf::IpAddress::LocalHost
             break;
         if (i == 9)
             std::cout << "ERROR - Binding sockett" << std::endl;
@@ -335,8 +347,8 @@ int main()
     Game game{seed};
     Graphics graphics{};
 
-    game.createPlayer();
-    game.createPlayer();
+    //game.createPlayer();
+    //game.createPlayer();
 
     timePoint startTime{ Time::now() };
     timePoint endTime{};
@@ -353,7 +365,7 @@ int main()
 
         // Send input to server
         sf::Packet packet;
-        packet << input;
+        packet << playerId << input;
         socket.send(packet, serverIp, serverPort);
 
         // Measure client active time

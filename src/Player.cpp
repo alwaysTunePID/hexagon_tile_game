@@ -9,8 +9,8 @@
 Player::Player()
 {}
 
-Player::Player(int id, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
-    : points{ 0 }, turnTime{ 40 }, name{ "Bob" }, 
+Player::Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
+    : points{ 0 }, turnTime{ 40 }, name{ name }, 
       id{ id }, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
       w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
       deathCounter{ 0 }, aimTileId{ 0 }, aimTileIdx{}, aimPos{0.f, 0.f}, aimVel{0.f, 0.f}, 
@@ -51,6 +51,11 @@ int Player::getPoints()
 std::string Player::getName()
 {
     return name;
+}
+
+void Player::setName(std::string newName)
+{
+    name = newName;
 }
 
 int Player::getId()

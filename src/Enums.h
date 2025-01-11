@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-constexpr bool DEBUG_LAUNCH { false };
+constexpr bool DEBUG_LAUNCH { true };
 
 #define ROWS 12
 #define COLUMNS 20
