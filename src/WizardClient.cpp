@@ -194,9 +194,18 @@ int main(int argc, char** argv) {
         connected = GameService.Connect();
 
 
+    bool hasFocus = false;
+
+    auto isKeyDown = [&hasFocus](sf::Keyboard::Key key) -> auto {
+        // isKeyPressed also works if window is unfocused. Ensure window is focused.
+        return hasFocus && sf::Keyboard::isKeyPressed (key);
+    };
+
     while (window.isOpen())
     {
         actionType action{ actionType::none };
+
+        hasFocus = window.hasFocus();
 
         for (auto event = sf::Event{}; window.pollEvent(event);)
         {
@@ -205,27 +214,27 @@ int main(int argc, char** argv) {
                 window.close();
             }
 
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+            if (isKeyDown(sf::Keyboard::Up))
             {
                 action = actionType::up;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+            else if (isKeyDown(sf::Keyboard::Down))
             {
                 action = actionType::down;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+            else if (isKeyDown(sf::Keyboard::Left))
             {
                 action = actionType::left;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+            else if (isKeyDown(sf::Keyboard::Right))
             {
                 action = actionType::right;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace))
+            else if (isKeyDown(sf::Keyboard::BackSpace))
             {
                 action = actionType::undoMove;
             }
-            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
+            else if (isKeyDown(sf::Keyboard::N))
             {
                 action = actionType::skipTurn;
             }
