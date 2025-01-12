@@ -38,6 +38,12 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
     float posV{};
 
     bool xboxConnected = sf::Joystick::isConnected(0);
+    bool hasFocus = window.hasFocus();
+
+    auto isKeyDown = [&hasFocus](sf::Keyboard::Key key) -> auto {
+        // isKeyPressed also works if window is unfocused. Ensure window is focused.
+        return hasFocus && sf::Keyboard::isKeyPressed(key);
+    };
 
     for (auto event = sf::Event{}; window.pollEvent(event);)
     {
@@ -46,23 +52,23 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
             window.close();
         }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace))
+        if (isKeyDown(sf::Keyboard::BackSpace))
         {
             input.action = actionType::undoMove;
         }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::N))
+        else if (isKeyDown(sf::Keyboard::N))
         {
             input.action = actionType::skipTurn;
         }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
+        else if (isKeyDown(sf::Keyboard::P))
         {
             std::cout << "Pressed P " << std::endl;
         }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+        else if (isKeyDown(sf::Keyboard::LShift) && isKeyDown(sf::Keyboard::Z))
         {
             posZ = -160.f;
         }
-        else if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift) && sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+        else if (!isKeyDown(sf::Keyboard::LShift) && isKeyDown(sf::Keyboard::Z))
         {
             posZ = 160.f;
         }
@@ -92,7 +98,7 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
                 enableShaders = true;
             }
         }
-        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
+        else if (isKeyDown(sf::Keyboard::L))
         {
             configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
             std::cout << joyThreshHigh << " " << joyThreshLow << std::endl;
@@ -139,36 +145,36 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
         }
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W))
+    if (isKeyDown(sf::Keyboard::W))
     {
         posY = -100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
+    if (isKeyDown(sf::Keyboard::A))
     {
         posX = -100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+    if (isKeyDown(sf::Keyboard::S))
     {
         posY = 100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+    if (isKeyDown(sf::Keyboard::D))
     {
         posX = 100.f;
     }
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+    if (isKeyDown(sf::Keyboard::Up))
     {
         posV = -100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+    if (isKeyDown(sf::Keyboard::Left))
     {
         posU = -100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+    if (isKeyDown(sf::Keyboard::Down))
     {
         posV = 100.f;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+    if (isKeyDown(sf::Keyboard::Right))
     {
         posU = 100.f;
     }
