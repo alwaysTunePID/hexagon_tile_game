@@ -9,7 +9,7 @@
 
 typedef struct PlayerStruct {
     int id;
-    int points;
+    playerStats stats;
     int turnTime;
     std::string name;
 } PlayerStruct;
@@ -17,10 +17,10 @@ typedef struct PlayerStruct {
 class Player
 {
 private:
-    int points;
     int turnTime;
     std::string name;
     int id;
+    playerStats stats;
     TileIdx tileIdx;
     PosInTile pos;
     VelInTile vel;
@@ -28,7 +28,6 @@ private:
     worldPos w_vel;
     directionType dir;
     int spawnTileId;
-    int deathCounter;
     int aimTileId;
     TileIdx aimTileIdx;
     PosInTile aimPos;
@@ -46,14 +45,13 @@ private:
 public:
     Player();
     Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
-    Player(int points, int turnTime, int id, bool currentPlayer);
+    Player(playerStats stats, int turnTime, int id, bool currentPlayer);
     ~Player();
 
-    void addPoint();
-    int getPoints();
     std::string getName();
     void setName(std::string newName);
     int getId();
+    playerStats getStats();
     TileIdx& getTileIdx();
     void setTileIdx(TileIdx tileIdxt);
     PosInTile& getPos();
@@ -63,10 +61,12 @@ public:
     PosInTile& getAimPos();
     void setAimPos(PosInTile posT);
     directionType getDir();
+    int getWorldObjectIds();
     int getSpawnTileId();
     void setSpawnTileId(int tileIdt);
     worldPos getUpdatedPos(double dt);
     PosInTile getUpdatedAimPos(double dt);
+    void canTakeInput(bool can);
     void setVelocity(moveInput& move);
     void setAimVelocity(moveInput& move);
     bool isCurrentPlayer();

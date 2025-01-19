@@ -10,10 +10,10 @@ Player::Player()
 {}
 
 Player::Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
-    : points{ 0 }, turnTime{ 40 }, name{ name }, 
-      id{ id }, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
+    : turnTime{ 40 }, name{ name }, 
+      id{ id }, stats{}, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
       w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
-      deathCounter{ 0 }, aimTileId{ 0 }, aimTileIdx{}, aimPos{0.f, 0.f}, aimVel{0.f, 0.f}, 
+      aimTileId{ 0 }, aimTileIdx{}, aimPos{0.f, 0.f}, aimVel{0.f, 0.f}, 
       clock{}, currentPlayer{ false }, lJoyMode{ LJoyMode::move },
       spellOngoing{ false }, selectedSpellIdx{ 0 },
       selectedSpellDirection{ directionType::none },
@@ -27,8 +27,8 @@ Player::Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObj
     //std::cout << "World pos player " << id << ":" << w_pos.x << " " << w_pos.y << std::endl; 
 }
 
-Player::Player(int points, int turnTime, int id, bool currentPlayer)
-    : points{points}, turnTime{turnTime}, id{id},
+Player::Player(playerStats stats, int turnTime, int id, bool currentPlayer)
+    : stats{stats}, turnTime{turnTime}, id{id},
       clock{}, currentPlayer{currentPlayer}, lJoyMode{ LJoyMode::move },
       spellOngoing{ false }, selectedSpellIdx{ 0 },
       selectedSpellDirection{ directionType::none },
@@ -37,16 +37,6 @@ Player::Player(int points, int turnTime, int id, bool currentPlayer)
 
 Player::~Player()
 {}
-
-void Player::addPoint()
-{
-    points++;
-}
-
-int Player::getPoints()
-{
-    return points;
-}
 
 std::string Player::getName()
 {
@@ -61,6 +51,11 @@ void Player::setName(std::string newName)
 int Player::getId()
 {
     return id;
+}
+
+playerStats Player::getStats()
+{
+    return stats;
 }
 
 TileIdx& Player::getTileIdx()
@@ -108,6 +103,12 @@ directionType Player::getDir()
     return (*worldObjects)[id].getDir();;
 }
 
+// TODO: This should return a vector of ids. 
+int Player::getWorldObjectIds()
+{
+    return id;
+}
+
 int Player::getSpawnTileId()
 {
     return spawnTileId;
@@ -130,6 +131,11 @@ PosInTile Player::getUpdatedAimPos(double dt)
         aimPos.second + aimVel.second * static_cast<float>(dt)
     };
     return updatedPos;
+}
+
+void Player::canTakeInput(bool can)
+{
+    (*worldObjects)[id].canTakeInput(can);
 }
 
 void Player::setVelocity(moveInput& move)
@@ -257,14 +263,14 @@ std::vector<SpellType>& Player::getSelectionSpells()
 
 void Player::increaseDeathCounter()
 {
-    deathCounter += 1;
+    stats.deaths += 1;
 }
 
 // Network
 void Player::getAllData(PlayerStruct& m) const
 {
     m.id       = id;
-    m.points   = points;
+    m.stats    = stats;
     m.turnTime = turnTime;
     m.name     = name;
 }
@@ -272,7 +278,7 @@ void Player::getAllData(PlayerStruct& m) const
 void Player::setAllData(PlayerStruct& m)
 {
     id       = m.id;
-    points   = m.points;
+    stats    = m.stats;
     turnTime = m.turnTime;
     name     = m.name;
 }

@@ -55,3 +55,7 @@ Clients active time period: 0.02
 Server  active time period: 0.0003
 So server is 67 times as fast
 60 fps => 0.016 period time
+
+## CMake info
+https://en.sfml-dev.org/forums/index.php?topic=24070.0 
+https://github.com/SFML/SFML/blob/master/cmake/SFMLConfig.cmake.in

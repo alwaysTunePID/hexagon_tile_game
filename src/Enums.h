@@ -59,6 +59,12 @@ typedef std::chrono::system_clock Time;
 typedef std::chrono::time_point<Time> timePoint;
 typedef std::chrono::duration<double> timeDuration;
 
+typedef struct playerStats {
+    uint16_t score;
+    uint16_t kills;
+    uint16_t deaths;
+} playerStats;
+
 const TileIdx OOB_TILE{ 300, 300 }; // Out of Bounds
 
 enum class tileType 

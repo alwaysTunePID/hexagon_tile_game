@@ -2,6 +2,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <cmath>
 #include "Graphics.h"
 #include "WorldObjectSprite.h"
 #include "Transformations.h"
@@ -33,7 +34,7 @@ Graphics::~Graphics()
         delete worldObjectSprite_p;
 }
 
-void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, double dt)
+void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, sf::Uint8 callerId, double dt)
 {
     window.clear();
     m_reflectionSurface.clear({245, 222, 179, 255}); // sand color
@@ -99,7 +100,7 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
     if (input.showCoordinateSystem)
         drawCoordinateSystem(window);
 
-    drawPlayerGUI(game, window);
+    drawPlayerGUI(game, window, callerId);
 
     window.display();
 }
@@ -258,15 +259,14 @@ void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
     }
 }
 
-void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
+void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 callerId)
 {
     for (auto& [id, player] : game.getPlayers())
     {
         // Need a box / canvas to draw text to ??
         std::string hi{ "Hello" };
         sf::Text texttt{ hi, font };
-        // set the character size
-        texttt.setCharacterSize(24); // in pixels, not points!
+        texttt.setCharacterSize(24);
         float turnTimer{ player.getTurnTime() };
         std::string turnTimerStr{ std::to_string(static_cast<int>(turnTimer)) };
         std::string completeStr{};
@@ -282,8 +282,11 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
             yText += SQ_WIDTH;
         }
 
+        playerStats stats{ player.getStats() };
+
         completeStr += player.getName();
-        completeStr += ("\n WINS: " + std::to_string(player.getPoints()));
+        completeStr += ("\n DEATHS: " + std::to_string(stats.deaths));
+        completeStr += ("\n KILLS: " + std::to_string(stats.kills));
         completeStr += ("\n TIME: " + turnTimerStr);
         texttt.setString(completeStr);
 
@@ -294,6 +297,31 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window)
         texttt.setColor(textColor);
 
         window.draw(texttt);
+
+        // TODO: This shouldn't be here
+        if (id == (int)callerId)
+        {
+            texttt.setCharacterSize(12);
+            worldPos pos{ game.getWorldObject(id).getPos() };
+            TileIdx tileIdx{ WorldPosToTileIdx(pos) };
+
+            //// Investigation shit
+            // double x_dec{ std::fmod(std::fabs(pos.x), 1.0) };
+            // double y_dec{ std::fmod(std::fabs(pos.y), 1.0) };
+            // bool onEdge{ x_dec > 0.33333 && x_dec < 0.66667 &&
+            //              y_dec > 0.33333 && y_dec < 0.66667 &&
+            //              std::fabs(x_dec - y_dec) < 0.01 };
+            // std::string onEdgeStr{ onEdge ? "True" : "False" };
+            std::string xStr{ std::to_string(std::round(pos.x * 100.0) / 100.0) };
+            std::string yStr{ std::to_string(std::round(pos.y * 100.0) / 100.0) };
+            xStr = (xStr.at(0) == '-') ? xStr.substr(0,5) : " " + xStr.substr(0,4);
+            yStr = (yStr.at(0) == '-') ? yStr.substr(0,5) : " " + yStr.substr(0,4); 
+            completeStr = "x: " + xStr + ", y: " + yStr + "\nTile: "
+                                + std::to_string(tileIdx.first) + ", " + std::to_string(tileIdx.second);
+            texttt.setString(completeStr);
+            texttt.setPosition(sf::Vector2f(10, 16));
+            window.draw(texttt);
+        }
 
         //TODO: This will not work when multiplayer
         if (player.isCurrentPlayer())
@@ -363,8 +391,7 @@ void Graphics::drawInventory(Player& player, sf::RenderWindow& window)
     {
         std::string hi{ "Hello" };
         sf::Text texttt{ hi, font };
-        // set the character size
-        texttt.setCharacterSize(24); // in pixels, not points!
+        texttt.setCharacterSize(24);
         sf::Color gray{ 255, 255, 255, 100 };
         std::string completeStr{};
         float xText{ 20 };

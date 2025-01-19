@@ -29,6 +29,9 @@ sf::Packet& operator >>(sf::Packet& packet, TileStruct& m);
 // Board
 sf::Packet& operator <<(sf::Packet& packet, const BoardStruct& m);
 sf::Packet& operator >>(sf::Packet& packet, BoardStruct& m);
+// playerStats
+sf::Packet& operator <<(sf::Packet& packet, const playerStats& m);
+sf::Packet& operator >>(sf::Packet& packet, playerStats& m);
 // Player
 sf::Packet& operator <<(sf::Packet& packet, const PlayerStruct& m);
 sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m);

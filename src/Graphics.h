@@ -28,14 +28,14 @@ public:
     Graphics();
     ~Graphics();
 
-    void update(Game& game, sf::RenderWindow& window, displayInput& zoom, double dt);
+    void update(Game& game, sf::RenderWindow& window, displayInput& zoom, sf::Uint8 callerId, double dt);
     void drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& reflectionSprite);
     void sortWorldObjects(Game& game, std::vector<WorldObject>& worldObjects);
     void drawReflections(Game& game);
     void drawWorldObjects(Game& game, sf::RenderWindow& window);
     void drawPlayers(Game& game, sf::RenderWindow& window);
     void drawCoordinateSystem(sf::RenderWindow& window);
-    void drawPlayerGUI(Game& game, sf::RenderWindow& window);
+    void drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 callerId);
     void updateCamera(displayInput& input);
     void drawInventory(Player& player, sf::RenderWindow& window);
     WorldObjectSprite* getWorldObjectSprite(WorldObjectType objectType, int value);

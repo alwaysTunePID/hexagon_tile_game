@@ -78,10 +78,10 @@ void Game::update(gameInput input, int playerId, double dt)
             // TODO: You need to update position of all world objects somewhere
             bool moved{ false };
             // moved = tryMove(player, dt);
-            if (moved)
-            {
-                executeProperties(player);
-            }
+            //if (moved)
+            //{
+            //    executeProperties(player);
+            //}
             player.setVelocity(input.move);
         }
         else if (player.isLJoyMode(LJoyMode::aim))
@@ -134,6 +134,7 @@ void Game::update(gameInput input, int playerId, double dt)
         }
 
         updatePosOfWorldObjects(dt);
+        checkPlayersInVoid();
         updateCastedSpells();
 
         if (actionTaken || newLevel)
@@ -234,6 +235,16 @@ void Game::addWorldObject(WorldObject& worldObject)
     worldObjects.insert({ worldObject.getId(), worldObject });
 }
 
+void Game::checkPlayersInVoid()
+{
+    for (auto& [id, player] : players)
+    // Delete objects that has fallen to the void
+    if (player.getWorldPos().z < -10.0)
+    {
+        killPlayer(player);
+    }
+}
+
 bool Game::tryMove(Player& player, double dt)
 {
     worldPos pos{ player.getUpdatedPos(dt) };
@@ -257,6 +268,37 @@ bool Game::tryMove(Player& player, double dt)
     {
         player.setTileIdx(newTileIdx);
         player.setWorldPos(pos);
+        return true;
+    }
+}
+
+bool Game::tryMove(WorldObject& worldObject, double dt)
+{
+    worldPos pos{ worldObject.getUpdatedPos(dt) };
+    TileIdx newTileIdx{ WorldPosToTileIdx(pos) };
+
+    if (newTileIdx == worldObject.getTileIdx())
+    {
+        // TODO: Optimize, WorldPosToTileIdx is called twice now. Here and in setPos.
+        worldObject.setPos(pos);
+        return false;
+    }
+
+    else if (board.isOutOfBounds(newTileIdx))
+    {
+        worldObject.setPos(pos);
+        worldObject.canTakeInput(false);
+        worldPos vel{ 0.0, 0.0, -10.0 };
+        worldObject.setVelocity(vel);
+        return false;
+    }
+    //else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
+    //{
+    //    return false;
+    //}
+    else
+    {
+        worldObject.setPos(pos);
         return true;
     }
 }
@@ -287,22 +329,39 @@ bool Game::moveAim(Player& player, double dt)
     return true;
 }
 
-void Game::executeProperties(Player& player)
+bool Game::isWorldObjectPlayer(WorldObject& worldObject, int& playerId)
 {
-    for (int tileId : board.getTileIds(player.getTileIdx()))
+    for (auto& [id, player] : players)
+    {
+        int worldObjectId{ player.getWorldObjectIds() };
+        if (worldObjectId == worldObject.getId())
+        {
+            playerId = id;
+            return true;
+        }
+    }
+    return false;
+}
+
+void Game::executeProperties(WorldObject& worldObject)
+{
+    for (int tileId : board.getTileIds(worldObject.getTileIdx()))
     {
         for (effectData effect : tiles[tileId].getProperties())
         {
+            int playerId;
             moveInput push{ 1.f , 100 };
             switch (effect.type)
             {
             case EffectType::sink:
-                killPlayer(player);
+                if (isWorldObjectPlayer(worldObject, playerId))
+                    killPlayer(players.at(playerId));
+                // Need an else here where the object gets deleted
                 break;
 
             case EffectType::wind:
                 // Fix this hardcoded shit!
-                player.setVelocity(push);
+                worldObject.setVelocity(push);
                 break;
 
             default:
@@ -315,8 +374,10 @@ void Game::executeProperties(Player& player)
 void Game::killPlayer(Player& player)
 {
     player.increaseDeathCounter();
-    tiles[player.getSpawnTileId()].activateEffect(EffectType::spawn);
-    player.setTileIdx(tiles[player.getSpawnTileId()].getTileIdx());
+    //tiles[player.getSpawnTileId()].activateEffect(EffectType::spawn);
+    player.setWorldPos(TileIdxToWorldPos(tiles[player.getSpawnTileId()].getTileIdx()));
+    player.canTakeInput(true);
+    player.setVelocity(moveInput{ 0.f, 0.f });
 }
 
 std::vector<castedSpellData>& Game::getCastedSpells()
@@ -364,8 +425,6 @@ void Game::castSpell()
 
 void Game::updatePosOfWorldObjects(double dt)
 {
-    worldPos pos;
-
     // Todo: Need to handle grass in a better way
     std::vector<int> interacWOIds{};
     for (auto& [id, worldObject] : worldObjects)
@@ -382,9 +441,10 @@ void Game::updatePosOfWorldObjects(double dt)
         auto& worldObject{ worldObjects.at(id) };
         if (worldObject.isMoving())
         {
-            pos = worldObject.getUpdatedPos(dt);
-            worldObject.setPos(pos);
             movedWorldObjects.push_back(id);
+            bool moved{ tryMove(worldObject, dt) };
+            if (moved)
+                executeProperties(worldObject);
         }
     }
 
@@ -548,16 +608,23 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
         double inc{ 0.2 };
         std::uniform_real_distribution<double> dist(0.0, 0.15);
         double temp { dist(generator) };
-        for (int i{0}; i < 4; i++)
+        for (int i{0}; i < 3; i++)   // 4
         {
-            for (int ii{0}; ii < 4; ii++)
+            for (int ii{0}; ii < 3; ii++)   // 4
             {
                 uint16_t id{ getNewObjectId() };
                 WorldObject grass{ id, WorldObjectType::grass, TileIdxToWorldPos(tileIdx), &wosWithDelta };
-                worldPos w_pos{ grass.getPos() };
 
-                w_pos.x += (inc * i - 0.42 + dist(generator));
-                w_pos.y += (inc * ii - 0.42 + dist(generator)); 
+                worldPos w_pos{ grass.getPos() };
+                worldPos w_pos_diff{
+                    (inc * i - 0.42 + dist(generator)),
+                    (inc * ii - 0.42 + dist(generator)),
+                    0
+                };
+                w_pos_diff = CartesianToWorldPos(w_pos_diff);
+                w_pos.x += w_pos_diff.x;
+                w_pos.y += w_pos_diff.y;
+
                 grass.setPos(w_pos);
                 addWorldObject(grass);
                 // You thought you could flip every other grass here by setting a direction but then WorldObjectSprite will
@@ -569,7 +636,7 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
 
 void Game::generateLevel()
 {
-    std::array<int, 3> OBJECT_PROB{ 30, 30, 40 };  // { 60, 30, 10 };
+    std::array<int, 3> OBJECT_PROB{ 60, 30, 10 };  // { 30, 30, 40 };
     std::discrete_distribution<int> dist_objects{ OBJECT_PROB.begin(), OBJECT_PROB.end() };
 
     for (int i = 0; i <= boardSize; i++)

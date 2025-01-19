@@ -414,7 +414,7 @@ int main()
                 //moveInput noMove{};
                 //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
                 //game.update(noInput, 0, dt); // Id has to be known!!!
-                graphics.update(game, window, dispInput, dt);
+                graphics.update(game, window, dispInput, playerId, dt);
 
             }
             else

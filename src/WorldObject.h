@@ -32,6 +32,7 @@ private:
     float height;
     sf::Vector2f origin;
     bool moving;
+    bool takeInput;
     std::vector<Fire> effects;
     std::unordered_set<int>* wosWithDelta;
 
@@ -47,9 +48,12 @@ public:
     directionType getDir();
     float getWidth();
     float getHeight();
+    TileIdx getTileIdx();
     worldPos getUpdatedPos(double dt);
     bool isMoving();
     bool isIntersecting(WorldObject& worldObject);
+    void canTakeInput(bool can);
+    void setVelocity(worldPos& velIn);
     void setVelocity(moveInput& move);
     void getAllData(WorldObjectStruct& m) const;
     void setAllData(WorldObjectStruct& m);

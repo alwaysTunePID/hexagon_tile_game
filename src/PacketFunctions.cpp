@@ -153,22 +153,31 @@ sf::Packet& operator >>(sf::Packet& packet, BoardStruct& m)
     return packet;
 }
 
+// playerStats
+sf::Packet& operator <<(sf::Packet& packet, const playerStats& m)
+{
+    return packet << m.score << m.kills << m.deaths;
+}
+
+sf::Packet& operator >>(sf::Packet& packet, playerStats& m)
+{
+    return packet >> m.score >> m.kills >> m.deaths;
+}
+
 // Player
 sf::Packet& operator <<(sf::Packet& packet, const PlayerStruct& m)
 {
-    return packet << (sf::Uint16)m.id << (sf::Int16)m.points << (sf::Uint16)m.turnTime << m.name;
+    return packet << (sf::Uint16)m.id << m.stats << (sf::Uint16)m.turnTime << m.name;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
 {
     sf::Uint16 id;
-    sf::Int16  points;
     sf::Uint16 turnTime;
 
-    packet = packet >> id >> points >> turnTime >> m.name;
+    packet = packet >> id >> m.stats >> turnTime >> m.name;
 
     m.id       = (int)id;
-    m.points   = (int)points;
     m.turnTime = (int)turnTime;
 
     return packet;

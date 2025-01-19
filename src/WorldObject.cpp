@@ -6,15 +6,15 @@
 // Todo  38.f was derived through testing just. Magick number
 WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta)
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
-      width{ GetHitbox(type).x / 38.f },
-      height{ GetHitbox(type).y / 38.f },
-      origin{}, moving{ false }, effects{}, wosWithDelta{ wosWithDelta }
+      width{ GetHitbox(type).x / 42.f },
+      height{ GetHitbox(type).y / 42.f },
+      origin{}, moving{ false }, takeInput{true}, effects{}, wosWithDelta{ wosWithDelta }
 {
     wosWithDelta->insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, effects{}, wosWithDelta{}
+    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, effects{}, wosWithDelta{}
 {}
 
 WorldObject::~WorldObject()
@@ -58,6 +58,11 @@ float WorldObject::getHeight()
     return height;
 }
 
+TileIdx WorldObject::getTileIdx()
+{
+    return tileIdx;
+}
+
 worldPos WorldObject::getUpdatedPos(double dt)
 {
     worldPos updatedPos{
@@ -77,8 +82,9 @@ bool WorldObject::isIntersecting(WorldObject& worldObject)
 {
     // Assume Cylinder shape, without rotations
     bool intersecting{ false };
-    worldPos inPos{ worldObject.getPos() };
-    float d{ float(pow(inPos.x - pos.x, 2) + pow(inPos.y - pos.y, 2)) };
+    worldPos inPos{ WorldPosToCartesian(worldObject.getPos()) };
+    worldPos selfPos{ WorldPosToCartesian(pos) };
+    float d{ float(pow(inPos.x - selfPos.x, 2) + pow(inPos.y - selfPos.y, 2)) };
     float r_sum{ float(pow((worldObject.getWidth() + width) / 2.f, 2)) };
 
     if (d < r_sum)
@@ -98,17 +104,38 @@ bool WorldObject::isIntersecting(WorldObject& worldObject)
         {
             float len{ std::sqrt(d) };
             float okLen{ std::sqrt(r_sum) };
-            pos.x = inPos.x + (pos.x - inPos.x) * (okLen / len);
-            pos.y = inPos.y + (pos.y - inPos.y) * (okLen / len);
+            worldPos newPos{
+                CartesianToWorldPos(worldPos{ 
+                    inPos.x + (selfPos.x - inPos.x) * (okLen / len),
+                    inPos.y + (selfPos.y - inPos.y) * (okLen / len),
+                    0
+            })};
+            pos.x = newPos.x;
+            pos.y = newPos.y;
         }
     }
     return intersecting;
 }
 
+void WorldObject::canTakeInput(bool can)
+{
+    takeInput = can;
+}
+
+void WorldObject::setVelocity(worldPos& velIn)
+{
+    vel = velIn;
+    wosWithDelta->insert(id);
+    // Temp: Got linking problems when trying to make this a function somewhere
+    double epsilon = 0.0001;
+    moving = !(std::fabs(vel.x) < epsilon && std::fabs(vel.y) < epsilon && std::fabs(vel.z) < epsilon);
+}
+
 // Not completely sure if this should be here instead of in Player
 void WorldObject::setVelocity(moveInput& move)
 {
-    vel = InputToWorldVel(move);
+    if (takeInput)
+        vel = InputToWorldVel(move);
     wosWithDelta->insert(id);
 
     // Temp: Got linking problems when trying to make this a function somewhere

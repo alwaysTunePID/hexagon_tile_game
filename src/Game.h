@@ -62,9 +62,12 @@ public:
     void addTile(Tile tile, TileIdx tileIdx);
     void removeAllTiles();
     void addWorldObject(WorldObject& worldObject);
+    void checkPlayersInVoid();
     bool tryMove(Player& player, double dt);
+    bool tryMove(WorldObject& worldObject, double dt);
     bool moveAim(Player& player, double dt);
-    void executeProperties(Player& player);
+    bool isWorldObjectPlayer(WorldObject& worldObject, int& playerId);
+    void executeProperties(WorldObject& worldObject);
     void killPlayer(Player& player);
     void moveToSpawn(Player& player);
     std::vector<castedSpellData>& getCastedSpells();
