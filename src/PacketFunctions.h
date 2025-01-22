@@ -20,6 +20,9 @@ sf::Packet& operator >>(sf::Packet& packet, worldPos& m);
 // WorldObject
 sf::Packet& operator <<(sf::Packet& packet, const WorldObjectStruct& m);
 sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m);
+// WorldObjectList
+sf::Packet& operator <<(sf::Packet& packet, const WorldObjectListStruct& m);
+sf::Packet& operator >>(sf::Packet& packet, WorldObjectListStruct& m);
 //TileIdx
 sf::Packet& operator <<(sf::Packet& packet, const TileIdx& m);
 sf::Packet& operator >>(sf::Packet& packet, TileIdx& m);

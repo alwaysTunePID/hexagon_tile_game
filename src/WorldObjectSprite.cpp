@@ -25,6 +25,8 @@ WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
     std::vector<std::string> dirStrings{ "" };
     if (GetTextureType(worldObjectType) == textureType::directional)
         dirStrings = {"1", "2", "3", "4"};
+    else if (worldObjectType == WorldObjectType::grass)
+        dirStrings = {"A", "B", "C"};
 
     sf::Texture texture{};
     for (auto& dirString : dirStrings)
@@ -248,6 +250,33 @@ void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& cam
     sprite.setPosition(s_pos.x, s_pos.y);
     float reflectionFlip{ reflected ? -1.f : 1.f };
     sprite.setScale(sf::Vector2f(getHFlipFactor(dir) * camera.zoom, reflectionFlip * camera.zoom));
+    float rotation{ reflected ? -16.f : 0.f };
+    sprite.setRotation(rotation);
+
+    if (objectType == WorldObjectType::mountain)
+    {
+        sf::Vector3f negScreenLightVec{
+            -static_cast<float>(globalLightVec.x),
+            -static_cast<float>(globalLightVec.y),
+            -static_cast<float>(globalLightVec.z)
+        };
+
+        m_shader.setUniform("texturee", sf::Shader::CurrentTexture);
+        m_shader.setUniform("normalMap", m_normalTexture);
+        m_shader.setUniform("negScreenLightDir", negScreenLightVec);
+        m_enableShaders = camera_in.enableShaders;
+    }
+}
+
+// TODO: Too much of a copy of the function above
+void WorldObjectSprite::updateSprite(woCosmetic& cosmetic, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
+{
+    sprite.setTexture(textures[cosmetic.value]);
+    displayInput camera { reflected ? CAMERA_0 : camera_in };
+    screenPos s_pos{ WorldToScreenPos(cosmetic.pos, camera) };
+    sprite.setPosition(s_pos.x, s_pos.y);
+    float reflectionFlip{ reflected ? -1.f : 1.f };
+    sprite.setScale(sf::Vector2f(camera.zoom, reflectionFlip * camera.zoom));
     float rotation{ reflected ? -16.f : 0.f };
     sprite.setRotation(rotation);
 

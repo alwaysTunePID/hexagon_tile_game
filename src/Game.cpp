@@ -425,20 +425,9 @@ void Game::castSpell()
 
 void Game::updatePosOfWorldObjects(double dt)
 {
-    // Todo: Need to handle grass in a better way
-    std::vector<int> interacWOIds{};
+    std::vector<int> movedWorldObjects{};
     for (auto& [id, worldObject] : worldObjects)
     {
-        if (worldObject.getType() != WorldObjectType::grass)
-        {
-            interacWOIds.push_back(id);
-        }
-    }
-
-    std::vector<int> movedWorldObjects{};
-    for (auto& id : interacWOIds)
-    {
-        auto& worldObject{ worldObjects.at(id) };
         if (worldObject.isMoving())
         {
             movedWorldObjects.push_back(id);
@@ -453,12 +442,11 @@ void Game::updatePosOfWorldObjects(double dt)
     {
         auto& worldObject{ worldObjects.at(id) };
 
-        for (auto& id2 : interacWOIds)
+        for (auto& [id2, worldObject2] : worldObjects)
         {
             if (id2 == id || std::find(handledIds.begin(), handledIds.end(), id2) != handledIds.end())
                 continue;
 
-            auto& worldObject2{ worldObjects.at(id2) };
             if (worldObject.isIntersecting(worldObject2))
             {
                 //std::cout << "Collision between: " << ToString(worldObject.getType()) << " " << ToString(worldObject2.getType()) << std::endl; 
@@ -602,35 +590,6 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
         uint16_t id{ getNewObjectId() };
         WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx), &wosWithDelta };
         addWorldObject(mountain);
-    }
-    else if (tile.getTileType() == tileType::grass)
-    {
-        double inc{ 0.2 };
-        std::uniform_real_distribution<double> dist(0.0, 0.15);
-        double temp { dist(generator) };
-        for (int i{0}; i < 3; i++)   // 4
-        {
-            for (int ii{0}; ii < 3; ii++)   // 4
-            {
-                uint16_t id{ getNewObjectId() };
-                WorldObject grass{ id, WorldObjectType::grass, TileIdxToWorldPos(tileIdx), &wosWithDelta };
-
-                worldPos w_pos{ grass.getPos() };
-                worldPos w_pos_diff{
-                    (inc * i - 0.42 + dist(generator)),
-                    (inc * ii - 0.42 + dist(generator)),
-                    0
-                };
-                w_pos_diff = CartesianToWorldPos(w_pos_diff);
-                w_pos.x += w_pos_diff.x;
-                w_pos.y += w_pos_diff.y;
-
-                grass.setPos(w_pos);
-                addWorldObject(grass);
-                // You thought you could flip every other grass here by setting a direction but then WorldObjectSprite will
-                // try to look for another texture as well...
-            }
-        }
     }
 }
 

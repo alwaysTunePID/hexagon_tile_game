@@ -78,6 +78,33 @@ sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m)
     return packet;
 }
 
+// WorldObjectList
+sf::Packet& operator <<(sf::Packet& packet, const WorldObjectListStruct& m)
+{
+    packet = packet << (sf::Uint16)m.worldObjects.size();
+    for (auto& [id, worldObjectS] : m.worldObjects)
+    {
+        packet = packet << worldObjectS;
+    }
+
+    return packet;
+}
+
+sf::Packet& operator >>(sf::Packet& packet, WorldObjectListStruct& m)
+{
+    sf::Uint16 numOfWorldObjects;
+    WorldObjectStruct worldObjectS;
+
+    packet = packet >> numOfWorldObjects;
+    for (sf::Uint16 i{ 0 }; i < numOfWorldObjects; i++)
+    {
+        packet = packet >> worldObjectS;
+        m.worldObjects.insert({ worldObjectS.id, worldObjectS });
+    }
+
+    return packet;
+}
+
 //TileIdx
 sf::Packet& operator <<(sf::Packet& packet, const TileIdx& m)
 {

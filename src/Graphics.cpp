@@ -7,10 +7,10 @@
 #include "WorldObjectSprite.h"
 #include "Transformations.h"
 
-Graphics::Graphics()
-    : clock{}, worldObjectSprites{}, tilesprites{},
+Graphics::Graphics(unsigned seed)
+    : clock{}, worldObjectSprites{}, tilesprites{}, tileCosmetics{}, grass{ WorldObjectType::grass, 0},
       font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{}, m_tileSurface{}, m_initTime{ Time::now() },
-      m_timePastForShader{}, m_globalLightVec{}
+      m_timePastForShader{}, m_globalLightVec{}, generator{ std::default_random_engine{seed} }
 {
     if (!m_reflectionSurface.create(WIDTH2, HEIGHT2))
         std::cout << "ERROR: Couldn't create reflectionSurface" << std::endl;
@@ -137,6 +137,16 @@ void Graphics::drawTiles(Game& game, sf::RenderWindow& window, sf::Sprite& refle
                             isFirstWaterTile = false;
                         }
                         tilesprite_p->updateAndDraw(window, tile, camera, m_globalLightVec, reflectionSprite, m_tileSurface, m_timePastForShader);
+                    }
+                    else if (tile.getTileType() == tileType::grass)
+                    {
+                        tilesprite_p->updateSprite(tile, camera);
+                        tilesprite_p->draw(window, tile);
+                        for (auto& cosmetic : *getTileCosmetics(tile))
+                        {
+                            grass.updateSprite(cosmetic, camera, m_globalLightVec, false);
+                            grass.draw(window);
+                        }
                     }
                     else
                     {
@@ -270,12 +280,12 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 cal
         float turnTimer{ player.getTurnTime() };
         std::string turnTimerStr{ std::to_string(static_cast<int>(turnTimer)) };
         std::string completeStr{};
-        float xText{ WIDTH2 - 200 };
+        float xText{ WIDTH2 - 240 };
         float yText{ HEIGHT2 / 2 };
 
         if (id == 0)
         {
-            yText -= SQ_WIDTH * 2;
+            yText -= SQ_WIDTH * 3.f;
         }
         else
         {
@@ -430,6 +440,37 @@ Tilesprite* Graphics::getTilesprite(Tile& tile)
         tilesprites.insert({tile.getTileType(), new Tilesprite(tile)});
     }
     return tilesprites[tile.getTileType()];
+}
+
+std::vector<woCosmetic>* Graphics::getTileCosmetics(Tile& tile)
+{
+    if (tileCosmetics.find(tile.getId()) == tileCosmetics.end()) {
+        // Couldn't find sprite so add it
+        double inc{ 0.2 };
+        std::uniform_real_distribution<double> dist(0.0, 0.15);
+        std::vector<woCosmetic> cosmeticVec;
+        worldPos c_pos{ TileIdxToWorldPos(tile.getTileIdx()) };
+        for (int i{0}; i < 4; i++)
+        {
+            for (int ii{0}; ii < 4; ii++)
+            {
+                worldPos w_pos_diff{
+                    (inc * i - 0.42 + dist(generator)),
+                    (inc * ii - 0.42 + dist(generator)),
+                    0
+                };
+                w_pos_diff = CartesianToWorldPos(w_pos_diff);
+                worldPos w_pos{ 
+                    c_pos.x + w_pos_diff.x,
+                    c_pos.y + w_pos_diff.y
+                };
+                woCosmetic grass{ (i+ii)%3, w_pos };
+                cosmeticVec.push_back(grass);
+            }
+        }
+        tileCosmetics.insert({tile.getId(), cosmeticVec});
+    }
+    return &tileCosmetics.at(tile.getId());
 }
 
 void Graphics::updateGlobalLightVec(double timePast)

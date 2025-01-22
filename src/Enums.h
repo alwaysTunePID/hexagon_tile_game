@@ -438,7 +438,7 @@ inline std::string GetFolderAndFile(WorldObjectType worldObject, int id)
         case WorldObjectType::player:
             return "Players/Player" + ToString(id) + "/Player" + ToString(id);
         case WorldObjectType::grass:
-            return "Grass/Grass" + ToString(id % 3); // The id decides which of the 3 grass textures
+            return "Grass/Grass";
         case WorldObjectType::mountain:
             return "Mountain/Mountain";
         case WorldObjectType::spell:

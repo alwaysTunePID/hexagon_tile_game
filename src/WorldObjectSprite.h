@@ -19,6 +19,12 @@ typedef struct pixelData {
     std::vector<sf::Vector2f> relPosHistory;
 } pixelData;
 
+// For grass
+typedef struct woCosmetic {
+    int value;
+    worldPos pos;
+} woCosmetic;
+
 class WorldObjectSprite
 {
 private:
@@ -57,6 +63,7 @@ public:
     void setScale(castedSpellData& spellData, displayInput& camera);
     void updateFrameIdx();
     void updateSprite(WorldObject& worldObject, displayInput& camera, worldPos& globalLightVec, bool reflected);
+    void updateSprite(woCosmetic& cosmetic, displayInput& camera_in, worldPos& globalLightVec, bool reflected);
     void updateSprite(worldPos w_pos, displayInput& camera);
     void addInstance(int id, animationData animationdata);
     animationData& getAnimationData(int id);

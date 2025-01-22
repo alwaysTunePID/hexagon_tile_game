@@ -26,6 +26,7 @@ ConfigParser configParser{ configPath };
 
 sf::IpAddress  serverIp;
 unsigned short serverPort{ 55001 };
+bool sendingActivated{ true };
 
 ///////////////// Functions ////////////////////////////
 void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInput)
@@ -350,8 +351,8 @@ int main()
 
     configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
 
-    Game game{seed};
-    Graphics graphics{};
+    Game game{ seed };
+    Graphics graphics{ seed };
 
     //game.createPlayer();
     //game.createPlayer();
@@ -369,10 +370,13 @@ int main()
 
         getInputs(window, input, dispInput);
 
-        // Send input to server
         sf::Packet packet;
-        packet << playerId << input;
-        socket.send(packet, serverIp, serverPort);
+        if (sendingActivated)
+        {
+            // Send input to server
+            packet << playerId << input;
+            socket.send(packet, serverIp, serverPort);
+        }
 
         // Measure client active time
         clientEndTime = Time::now();
@@ -380,7 +384,6 @@ int main()
         //std::cout << "Active time: " << clientTimePast.count() << std::endl;
 
         // Wait for answer
-        GameStruct serverMsg;
         sf::IpAddress sender;
         unsigned short senderPort;
         socket.receive(packet, sender, senderPort);
@@ -394,33 +397,47 @@ int main()
             packet = packet >> packageTypeInt;
             PackageType packageType = (PackageType)packageTypeInt;
 
-            if (packet >> serverMsg)
+            if (packageType == PackageType::all)
             {
-                if (packageType == PackageType::all)
+                GameStruct serverMsg;
+                if (packet >> serverMsg)
+                {
                     game.setAllData(serverMsg);
-                else if (packageType == PackageType::delta)
-                    game.setDeltaData(serverMsg);
-                // TODO: Change to SFML time
-                endTime = Time::now();
-                timeDuration timePast{ endTime - startTime };
-                double dt{ timePast.count() };
-                startTime = endTime;
-
-                // Activate the window for OpenGL rendering
-                window.setActive();
-
-                // OpenGL drawing commands go here...
-
-                //moveInput noMove{};
-                //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
-                //game.update(noInput, 0, dt); // Id has to be known!!!
-                graphics.update(game, window, dispInput, playerId, dt);
-
+                    //sendingActivated = false; // Because waiting for second part of message
+                }
+                else
+                {
+                    std::cout << "Error extracting PackageType::all from server!" << std::endl;
+                }
             }
-            else
+            else if (packageType == PackageType::delta)
             {
-                std::cout << "Error extracting package from server!" << std::endl;
+                GameStruct serverMsg;
+                if (packet >> serverMsg)
+                {
+                    game.setDeltaData(serverMsg);
+                }
+                else
+                {
+                    std::cout << "Error extracting PackageType::delta from server!" << std::endl;
+                }
             }
+            // TODO: Change to SFML time
+            endTime = Time::now();
+            timeDuration timePast{ endTime - startTime };
+            double dt{ timePast.count() };
+            startTime = endTime;
+
+            // Activate the window for OpenGL rendering
+            window.setActive();
+
+            // OpenGL drawing commands go here...
+
+            //moveInput noMove{};
+            //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
+            //game.update(noInput, 0, dt); // Id has to be known!!!
+            graphics.update(game, window, dispInput, playerId, dt);
+
         }
 
         //sf::sleep(sf::milliseconds(10));

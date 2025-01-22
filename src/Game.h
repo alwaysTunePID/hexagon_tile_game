@@ -22,6 +22,10 @@ typedef struct GameStruct {
     BoardStruct board;
 } GameStruct;
 
+typedef struct WorldObjectListStruct {
+    std::map<int, WorldObjectStruct> worldObjects;
+} WorldObjectListStruct;
+
 class Game
 {
 private:    

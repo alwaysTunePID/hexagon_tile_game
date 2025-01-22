@@ -16,6 +16,8 @@ private:
     sf::Clock clock;
     std::map<std::pair<WorldObjectType, int>, WorldObjectSprite*> worldObjectSprites;
     std::map<tileType, Tilesprite*> tilesprites;
+    std::map<int, std::vector<woCosmetic>> tileCosmetics;
+    WorldObjectSprite grass;
     sf::Font font;
     displayInput camera;
     sf::RenderTexture m_reflectionSurface;
@@ -23,9 +25,10 @@ private:
     timePoint m_initTime;
     float m_timePastForShader;
     worldPos m_globalLightVec;
+    std::default_random_engine generator;
 
 public:
-    Graphics();
+    Graphics(unsigned seed);
     ~Graphics();
 
     void update(Game& game, sf::RenderWindow& window, displayInput& zoom, sf::Uint8 callerId, double dt);
@@ -40,6 +43,7 @@ public:
     void drawInventory(Player& player, sf::RenderWindow& window);
     WorldObjectSprite* getWorldObjectSprite(WorldObjectType objectType, int value);
     Tilesprite* getTilesprite(Tile& tile);
+    std::vector<woCosmetic>* getTileCosmetics(Tile& tile);
     void updateGlobalLightVec(double timePast);
     void updateGlobalLightVec2(double timePast);
 };

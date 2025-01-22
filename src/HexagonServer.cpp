@@ -170,16 +170,17 @@ int main()
                     if (clientdata.needsAllData)
                     {
                         game.getAllData(gameMsg);
-                        packet << (sf::Int8)PackageType::all;
+                        packet << (sf::Int8)PackageType::all << gameMsg;
+                        std::cout << "Packet size 'all': " << (int)packet.getDataSize() << std::endl;
+                        socket.send(packet, clientdata.ip, clientdata.port);
                         clientdata.needsAllData = false;
                     }
                     else
                     {
                         game.getDeltaData(gameMsg);
-                        packet << (sf::Int8)PackageType::delta;
+                        packet << (sf::Int8)PackageType::delta << gameMsg;
+                        socket.send(packet, clientdata.ip, clientdata.port);
                     }                      
-                    packet << gameMsg;
-                    socket.send(packet, clientdata.ip, clientdata.port);
                     break;
                 }
             }
