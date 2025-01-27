@@ -41,6 +41,7 @@ Tilesprite::Tilesprite(Tile& tile)
     std::string imagePath2{ "../../../resources/textures/HighlightTile/HighlightTile.png" };
     highlightTexture.loadFromFile(imagePath2);
     highlightSprite.setTexture(highlightTexture);
+    highlightSprite.setOrigin(TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1); // -1 because of tile thickness
     highlightSprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 
     // load only the fragment shader

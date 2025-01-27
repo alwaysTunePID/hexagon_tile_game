@@ -79,14 +79,14 @@ tileType Tile::getTileType()
     return type;
 }
 
-void Tile::setBlockType(tileType blocktype)
+void Tile::setType(tileType newType)
 {
     textureType prevTextureType {GetTextureType(type)};
-    textureType newTextureType {GetTextureType(blocktype)};
+    textureType newTextureType {GetTextureType(newType)};
 
-    type = blocktype;
+    type = newType;
     clearProperties();
-    addEffect({GetInheritEffect(blocktype), directionType::none, false});
+    addEffect({GetInheritEffect(newType), directionType::none, false});
 
     if (prevTextureType == textureType::directional && 
         newTextureType != textureType::directional)

@@ -115,8 +115,11 @@ enum class WorldObjectType
     tree,
     grass,
     mountain,
+    volcano,
     spell,
+    fireball,
     visual,
+    remove,
     last
 };
 
@@ -146,6 +149,11 @@ enum class burnType
     normal,
     none
 };
+
+typedef struct collisionOutcome {
+    WorldObjectType movedWO;
+    WorldObjectType worldObject;
+} collisionOutcome;
 
 typedef struct spellOutcome {
     tileType tile;
@@ -185,6 +193,51 @@ inline double GetSpeed(SpellType spell)
     }
 }
 
+inline collisionOutcome GetWorldObjectsFromCollision(WorldObjectType movedWO, WorldObjectType woType)
+{
+    switch (movedWO)
+    {
+    case WorldObjectType::fireball:
+        switch (woType)
+        {
+        case WorldObjectType::mountain:
+            return {WorldObjectType::remove, WorldObjectType::volcano};
+        default:
+            return {WorldObjectType::remove, WorldObjectType::last};
+        }
+    default:
+        return {WorldObjectType::last, WorldObjectType::last};
+    }
+}
+
+inline tileType GetTileFromCollision(tileType tile, WorldObjectType woType)
+{
+    switch (woType)
+    {
+    case WorldObjectType::fireball:
+        switch (tile)
+        {
+        case tileType::grass:
+            return {tileType::burnedGround};
+
+        case tileType::mountain:
+            return {tileType::volcano};
+
+        case tileType::burnedGround:
+            return {tileType::burnedGround};
+
+        case tileType::snow:
+            return {tileType::grass};
+
+        default:
+            return {tileType::last};
+        }
+    default:
+        return {tileType::last};
+    }
+}
+
+// TODO: Is this in use now or shoukd it be removed?
 inline spellOutcome GetTileFromCastSpell(tileType tile, SpellType spell)
 {
     switch (spell)
@@ -293,6 +346,10 @@ inline textureSize GetSize(WorldObjectType objectType, int id)
             return {10, 5};
         case WorldObjectType::mountain:
             return {48, 44};
+        case WorldObjectType::volcano:
+            return {48, 44};
+        case WorldObjectType::fireball:
+            return {10, 10};
         case WorldObjectType::spell:
             return {16, 16};
         case WorldObjectType::visual:
@@ -318,8 +375,51 @@ inline sf::Vector2f GetHitbox(WorldObjectType objectType)
             return {14.f, 28.f};
         case WorldObjectType::mountain:
             return {44.f, 44.f - 12.5f};
+        case WorldObjectType::volcano:
+            return {44.f, 44.f - 12.5f};
+        case WorldObjectType::fireball:
+            return {10.f, 10.f};
         default:
             return {1.f, 1.f};
+    }
+}
+
+inline sf::Vector2f GetTextureOrigin(WorldObjectType objectType, sf::Vector2f dim)
+{
+    switch (objectType)
+    {
+        case WorldObjectType::player:
+            return {dim.x / 2.f, dim.y / 2.f + 12.f};
+        case WorldObjectType::grass:
+            return {dim.x / 2.f, dim.y / 2.f + 2.f};
+        case WorldObjectType::mountain:
+            return {dim.x / 2.f, dim.y - 12.5f};
+        case WorldObjectType::volcano:
+            return {dim.x / 2.f, dim.y - 12.5f};
+        default:
+            return {dim.x / 2.f, dim.y / 2.f};
+    }
+}
+
+inline bool GetCanFall(WorldObjectType objectType)
+{
+    switch (objectType)
+    {
+        case WorldObjectType::player:
+            return true;
+        default:
+            return false;
+    }
+}
+
+inline bool GetCollideable(WorldObjectType objectType)
+{
+    switch (objectType)
+    {
+        case WorldObjectType::visual:
+            return false;
+        default:
+            return true;
     }
 }
 
@@ -355,8 +455,14 @@ inline std::string ToString(WorldObjectType worldObject)
     switch (worldObject)
     {
         case WorldObjectType::player:            return "Player";
+        case WorldObjectType::tree:              return "Tree";
         case WorldObjectType::grass:             return "Grass";
         case WorldObjectType::mountain:          return "Mountain";
+        case WorldObjectType::volcano:           return "Volcano";
+        case WorldObjectType::spell:             return "Spell";
+        case WorldObjectType::fireball:          return "Fireball";
+        case WorldObjectType::visual:            return "Visual";
+        case WorldObjectType::remove:            return "Remove";
         default:      return "[Unknown WorldObjectType]";
     }
 }
@@ -441,6 +547,10 @@ inline std::string GetFolderAndFile(WorldObjectType worldObject, int id)
             return "Grass/Grass";
         case WorldObjectType::mountain:
             return "Mountain/Mountain";
+        case WorldObjectType::volcano:
+            return "Volcano/Volcano";
+        case WorldObjectType::fireball:
+            return "Fireball/Fireball";
         case WorldObjectType::spell:
             name = ToString(static_cast<SpellType>(id));
             return "Spells/" + name + "/" + name;

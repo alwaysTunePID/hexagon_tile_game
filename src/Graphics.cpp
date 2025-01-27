@@ -208,7 +208,14 @@ void Graphics::drawWorldObjects(Game& game, sf::RenderWindow& window)
 
     for (WorldObject& worldObject : worldObjects)
     {
-        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        int value{ worldObject.getId() };
+        // TODO: Temp for visual
+        if (worldObject.getType() == WorldObjectType::visual)
+            continue;
+        else if (worldObject.getType() == WorldObjectType::player)
+            value = game.getPlayerIdToWOId(worldObject.getId());
+
+        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), value) };
         worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
         worldObjectSprite_p->draw(window);
     }
@@ -224,7 +231,14 @@ void Graphics::drawReflections(Game& game)
     // Draw objects in reflected perspective
     for (WorldObject& worldObject : worldObjects)
     {
-        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), worldObject.getId()) };
+        int value{ worldObject.getId() };
+        // TODO: Temp for visual
+        if (worldObject.getType() == WorldObjectType::visual)
+            continue;
+        else if (worldObject.getType() == WorldObjectType::player)
+            value = game.getPlayerIdToWOId(worldObject.getId());
+
+        WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), value) };
         worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
         worldObjectSprite_p->draw(m_reflectionSurface);
     }
@@ -312,16 +326,9 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 cal
         if (id == (int)callerId)
         {
             texttt.setCharacterSize(12);
-            worldPos pos{ game.getWorldObject(id).getPos() };
+            worldPos pos{ game.getWorldObject(player.getWorldObjectIds()).getPos() };
             TileIdx tileIdx{ WorldPosToTileIdx(pos) };
 
-            //// Investigation shit
-            // double x_dec{ std::fmod(std::fabs(pos.x), 1.0) };
-            // double y_dec{ std::fmod(std::fabs(pos.y), 1.0) };
-            // bool onEdge{ x_dec > 0.33333 && x_dec < 0.66667 &&
-            //              y_dec > 0.33333 && y_dec < 0.66667 &&
-            //              std::fabs(x_dec - y_dec) < 0.01 };
-            // std::string onEdgeStr{ onEdge ? "True" : "False" };
             std::string xStr{ std::to_string(std::round(pos.x * 100.0) / 100.0) };
             std::string yStr{ std::to_string(std::round(pos.y * 100.0) / 100.0) };
             xStr = (xStr.at(0) == '-') ? xStr.substr(0,5) : " " + xStr.substr(0,4);
@@ -331,29 +338,26 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 cal
             texttt.setString(completeStr);
             texttt.setPosition(sf::Vector2f(10, 16));
             window.draw(texttt);
-        }
 
-        //TODO: This will not work when multiplayer
-        if (player.isCurrentPlayer())
-        {
+
             // Draw aim arrow
             if (player.isLJoyMode(LJoyMode::aim))
             {
-                TileIdx tileIdx{ player.getAimTileIdx() };
-                directionType direction{ player.getSelectedSpellDir() };
-
+                WorldObject& worldObject{ game.getWorldObject(player.getAimId()) };
+                bool reflected{ false };
                 int value1{ static_cast<int>(VisualType::aim) };
-                WorldObjectSprite* worldObjectSprite1_p{ getWorldObjectSprite(WorldObjectType::visual, value1) };
-                //worldObjectSprite1_p->updateSprite(0, tileIdx, player.getAimPos(), direction, camera);
-                //worldObjectSprite1_p->draw(window);
+                WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(worldObject.getType(), value1) };
+                worldObjectSprite_p->updateSprite(worldObject, camera, m_globalLightVec, reflected);
+                worldObjectSprite_p->draw(window);
 
-                if (IsDirectional(player.getSelectedSpell()))
-                {
-                    int value{ static_cast<int>(VisualType::aimDir) };
-                    WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(WorldObjectType::visual, value) };
-                    //worldObjectSprite_p->updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
-                    //worldObjectSprite_p->draw(window);
-                }
+                //if (IsDirectional(player.getSelectedSpell()))
+                //{
+                //    directionType direction{ player.getSelectedSpellDir() };
+                //    int value{ static_cast<int>(VisualType::aimDir) };
+                //    WorldObjectSprite* worldObjectSprite_p{ getWorldObjectSprite(WorldObjectType::visual, value) };
+                //    //worldObjectSprite_p->updateSprite(0, tileIdx, {0.f, 0.f}, direction, camera);
+                //    //worldObjectSprite_p->draw(window);
+                //}
             }
             drawInventory(player, window);
         }

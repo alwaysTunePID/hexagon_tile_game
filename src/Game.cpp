@@ -23,34 +23,26 @@ Game::~Game()
 {
 }
 
-void Game::createPlayer(std::string name)
+void Game::createPlayer(uint16_t id, std::string name)
 {
-    uint16_t newPlayerId{ getNewObjectId() };
-    TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(newPlayerId) };
+    uint16_t newCharacterId{ getNewObjectId() };
+    uint16_t newAimId{ getNewObjectId() };
+    TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(id) };
 
-    WorldObject worldObject{ newPlayerId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+    WorldObject worldObject{ newCharacterId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+    WorldObject aimWorldObject{ newAimId, WorldObjectType::visual, TileIdxToWorldPos(tileIdx), &wosWithDelta };
     addWorldObject(worldObject);
+    addWorldObject(aimWorldObject);
 
-    Player player{newPlayerId, name, tileIdx, &worldObjects };
-    if (newPlayerId == 0)
+    Player player{id, newCharacterId, newAimId, name, tileIdx, &worldObjects };
+    if (id == 0)
         player.setCurrentPlayer(true);
-    players.insert({newPlayerId, player});
+    players.insert({id, player});
 }
-
-void Game::addPlayer(Player player)
-{
-    players.insert({player.getId(), player});
-}
-
-
-void Game::removeAllPlayers()
-{
-    players.clear();
-}
-
 
 void Game::update(gameInput input, int playerId, double dt)
 {
+    // BUG!! You can't clear delta when not sent to all clients... probably the reason to the tile highlighted issue
     tilesWithDelta.clear();
     wosWithDelta.clear();
     //TODO: Temp hardcoding!
@@ -73,9 +65,12 @@ void Game::update(gameInput input, int playerId, double dt)
         //if (playerId != currentPlayer)
         //    return;
 
+        // TODO: Optimize this!!
+        for (auto& [id, tile] : tiles)
+            tile.setHighlighted(false);
+
         if (player.isLJoyMode(LJoyMode::move))
         {
-            // TODO: You need to update position of all world objects somewhere
             bool moved{ false };
             // moved = tryMove(player, dt);
             //if (moved)
@@ -83,12 +78,11 @@ void Game::update(gameInput input, int playerId, double dt)
             //    executeProperties(player);
             //}
             player.setVelocity(input.move);
+            player.setAimVelocity(zeroVel);
         }
         else if (player.isLJoyMode(LJoyMode::aim))
         {
-            //TileIdx fromTile{ player.getAimTileIdx() };
-            //TileIdx toTile{ board.getTileInFront(fromTile, moveDirection) };
-            moveAim(player, dt);
+            player.setVelocity(zeroVel);
             player.setAimVelocity(input.move);
         }
 
@@ -96,26 +90,17 @@ void Game::update(gameInput input, int playerId, double dt)
         {
         case xbox::X:
             player.toggleLJoyMode();
-            tiles[player.getAimTileId()].setHighlighted(false);
-
-            if (player.isLJoyMode(LJoyMode::aim))
-            {
-                int tileId{ board.getTileId(player.getTileIdx()) };
-                player.setAimTile(tiles[tileId]);
-                player.setVelocity(zeroVel);
-            }
-            else
-            {
-                player.setAimVelocity(zeroVel);
-            }
+            player.getAimWO().setPos(player.getWorldPos());
             break;
 
         case xbox::A:
             if (player.isLJoyMode(LJoyMode::aim))
             {
-                player.toggleLJoyMode();
-                tiles[player.getAimTileId()].setHighlighted(false);
-                castSpell();
+                if (playerId == currentPlayer)
+                {
+                    player.toggleLJoyMode();
+                    castSpell();
+                }
             }
             break; 
 
@@ -135,6 +120,15 @@ void Game::update(gameInput input, int playerId, double dt)
 
         updatePosOfWorldObjects(dt);
         checkPlayersInVoid();
+
+        // TODO: Move to a function
+        if (player.isLJoyMode(LJoyMode::aim) && player.isCurrentPlayer() )
+        {
+            int toTileId{ board.getTileId(player.getAimWO().getTileIdx()) };
+            tiles.at(toTileId).setHighlighted(true);
+        }
+
+
         updateCastedSpells();
 
         if (actionTaken || newLevel)
@@ -245,33 +239,6 @@ void Game::checkPlayersInVoid()
     }
 }
 
-bool Game::tryMove(Player& player, double dt)
-{
-    worldPos pos{ player.getUpdatedPos(dt) };
-    TileIdx newTileIdx{ WorldPosToTileIdx(pos) };
-
-    if (newTileIdx == player.getTileIdx())
-    {
-        player.setWorldPos(pos);
-        return false;
-    }
-
-    else if (board.isOutOfBounds(newTileIdx))
-    {
-        return false;
-    }
-    else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
-    {
-        return false;
-    }
-    else
-    {
-        player.setTileIdx(newTileIdx);
-        player.setWorldPos(pos);
-        return true;
-    }
-}
-
 bool Game::tryMove(WorldObject& worldObject, double dt)
 {
     worldPos pos{ worldObject.getUpdatedPos(dt) };
@@ -287,9 +254,12 @@ bool Game::tryMove(WorldObject& worldObject, double dt)
     else if (board.isOutOfBounds(newTileIdx))
     {
         worldObject.setPos(pos);
-        worldObject.canTakeInput(false);
-        worldPos vel{ 0.0, 0.0, -10.0 };
-        worldObject.setVelocity(vel);
+        if (worldObject.canFall())
+        {
+            worldObject.canTakeInput(false);
+            worldPos vel{ 0.0, 0.0, -10.0 };
+            worldObject.setVelocity(vel);
+        }
         return false;
     }
     //else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
@@ -301,32 +271,6 @@ bool Game::tryMove(WorldObject& worldObject, double dt)
         worldObject.setPos(pos);
         return true;
     }
-}
-
-bool Game::moveAim(Player& player, double dt)
-{
-    //PosInTile pos{ player.getUpdatedAimPos(dt) };
-    // Temp to be able to compile
-    worldPos pos{ player.getUpdatedPos(dt) };
-    directionType direction{ board.getNewTileDir(pos) };
-    //player.setAimPos(pos);
-
-    if (direction == directionType::none)
-    {
-        return false;
-    }
-
-    TileIdx toTile{ board.getTileInFront(player.getAimTileIdx(), direction) };
-    if (board.isOutOfBounds(toTile))
-    {
-        return false;
-    }
-
-    int toTileId{ board.getTileId(toTile) };
-    tiles[toTileId].setHighlighted(true);
-    tiles[player.getAimTileId()].setHighlighted(false);
-    player.setAimTile(tiles[toTileId]);
-    return true;
 }
 
 bool Game::isWorldObjectPlayer(WorldObject& worldObject, int& playerId)
@@ -341,6 +285,16 @@ bool Game::isWorldObjectPlayer(WorldObject& worldObject, int& playerId)
         }
     }
     return false;
+}
+
+int Game::getPlayerIdToWOId(uint16_t woId)
+{
+    for (auto& [id, player] : players)
+    {
+        if (player.getWorldObjectIds() == woId)
+            return id;
+    }
+    return -1;
 }
 
 void Game::executeProperties(WorldObject& worldObject)
@@ -398,7 +352,20 @@ void Game::castSpell()
     Player& player{ players[currentPlayer] };
     SpellType spellType{ player.getSelectedSpell() };
 
+    worldPos fromPos{ player.getWorldPos() };
+    worldPos destination{ TileIdxToWorldPos(player.getAimWO().getTileIdx()) };
+    // TODO: fix hardcoded
+    float speed{ 1.f };
+    worldPos vel{ CalcWorldVelVec(fromPos, destination, speed) };
+
+    uint16_t id{ getNewObjectId() };
+    WorldObject fireball{ id, WorldObjectType::fireball, fromPos, &wosWithDelta };
+    fireball.setVelocity(vel);
+    fireball.setPos(fireball.getUpdatedPos(0.3));
+    addWorldObject(fireball);
+
     // Graphics need to know how to draw player here
+    /*
     if (spellType == SpellType::teleport)
         player.setSpellOngoing(true);
 
@@ -408,7 +375,7 @@ void Game::castSpell()
     castedSpell.spellType = spellType;
     castedSpell.dir = player.getSelectedSpellDir();
     castedSpell.fromTileIdx = player.getTileIdx();
-    castedSpell.toTileIdx = tiles[player.getAimTileId()].getTileIdx();
+    castedSpell.toTileIdx = player.getAimWO().getTileIdx();
 
     if (GetSpeed(spellType) < 0)
     {
@@ -420,7 +387,7 @@ void Game::castSpell()
         castedSpell.startTime = startTime;
         castedSpell.traveledPerc = 0.0;
         castedSpells.push_back(castedSpell);
-    }
+    }*/
 }
 
 void Game::updatePosOfWorldObjects(double dt)
@@ -449,9 +416,23 @@ void Game::updatePosOfWorldObjects(double dt)
 
             if (worldObject.isIntersecting(worldObject2))
             {
-                //std::cout << "Collision between: " << ToString(worldObject.getType()) << " " << ToString(worldObject2.getType()) << std::endl; 
-                moveInput zeroVel{ 0.f, 0 };
-                worldObject.setVelocity(zeroVel);
+                if (worldObject.isCollideable() && worldObject2.isCollideable())
+                {
+                    std::cout << ToString(worldObject.getType()) << " collided with " << ToString(worldObject2.getType()) << std::endl;
+                    Tile& tile{ tiles.at(board.getTileId(worldObject2.getTileIdx())) };
+                    tileType newTileType{ GetTileFromCollision(tile.getTileType(), worldObject.getType()) };
+                    if (newTileType != tileType::last)
+                        tile.setType(newTileType);
+                    collisionOutcome collOutcome{ GetWorldObjectsFromCollision(worldObject.getType(), worldObject2.getType()) };
+                    // TODO: Handle the remove part as well!
+                    if (collOutcome.movedWO != WorldObjectType::last)
+                        worldObject.setType(collOutcome.movedWO);
+                    if (collOutcome.worldObject != WorldObjectType::last)
+                        worldObject2.setType(collOutcome.worldObject);
+                    //std::cout << "Collision between: " << ToString(worldObject.getType()) << " " << ToString(worldObject2.getType()) << std::endl; 
+                    moveInput zeroVel{ 0.f, 0 };
+                    worldObject.setVelocity(zeroVel);
+                }
             }
         }
         handledIds.push_back(id);
@@ -485,7 +466,7 @@ void Game::executeSpell(castedSpellData& castedSpell)
     std::cout << ToString(tile.getTileType()) << std::endl;
     spellOutcome outcome{ GetTileFromCastSpell(tile.getTileType(), castedSpell.spellType) };
     if (outcome.tile != tileType::last)
-        tile.setBlockType(outcome.tile);
+        tile.setType(outcome.tile);
 
     if (outcome.effect != EffectType::last)
     {
@@ -616,7 +597,7 @@ void Game::generateLevel()
             if (isASpawnTile(tileIdx))
             {
                 // TODO: Hardcoded
-                tile.setBlockType(tileType::grass);
+                tile.setType(tileType::grass);
                 tile.addEffect({EffectType::spawn, directionType::none, true});
             }
 

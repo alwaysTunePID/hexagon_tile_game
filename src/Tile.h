@@ -44,7 +44,7 @@ public:
     void setHighlighted(bool highlightedT);
     void increaseMoveIdx();
     tileType getTileType();
-    void setBlockType(tileType blocktype);
+    void setType(tileType blocktype);
     EffectType getTextType();
     int getId();
     bool hasEffect(EffectType effect);

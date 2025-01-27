@@ -33,6 +33,8 @@ private:
     sf::Vector2f origin;
     bool moving;
     bool takeInput;
+    bool fallable;
+    bool collideable;
     std::vector<Fire> effects;
     std::unordered_set<int>* wosWithDelta;
 
@@ -43,6 +45,7 @@ public:
 
     uint16_t getId();
     WorldObjectType getType();
+    void setType(WorldObjectType newType);
     worldPos getPos();
     void setPos(worldPos w_pos);
     directionType getDir();
@@ -53,6 +56,8 @@ public:
     bool isMoving();
     bool isIntersecting(WorldObject& worldObject);
     void canTakeInput(bool can);
+    bool canFall();
+    bool isCollideable();
     void setVelocity(worldPos& velIn);
     void setVelocity(moveInput& move);
     void getAllData(WorldObjectStruct& m) const;

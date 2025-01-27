@@ -67,7 +67,7 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
                     size_t id{ clients.size() };
                     clientData clientdata{ sender, clientPort, name, Time::now(), true, true};
                     clients.insert({ id, clientdata });
-                    game.createPlayer(name);
+                    game.createPlayer(id, name);
                     std::cout << name << " connected. (" << clients.size() << "/" << numOfPlayers << ")" << std::endl;
 
                     packet.clear();

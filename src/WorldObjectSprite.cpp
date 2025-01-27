@@ -47,23 +47,7 @@ WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
     }
 
     sprite.setTexture(textures[0]);
-    // TODO: How do we fix this?
-    if (worldObjectType == WorldObjectType::player)
-    {
-        sprite.setOrigin(m_width / 2, m_height / 2 + 12); // Is this hardcoding ok? 
-    }
-    else if (worldObjectType == WorldObjectType::grass)
-    {
-        sprite.setOrigin(m_width / 2, m_height / 2 + 2); // Is this hardcoding ok? 
-    }
-    else if (worldObjectType == WorldObjectType::mountain)
-    {
-        sprite.setOrigin(m_width / 2, m_height - 12.5); // Is this hardcoding ok? 
-    }
-    else
-    {
-        sprite.setOrigin(m_width / 2, m_height / 2); // Is this hardcoding ok? 
-    }
+    sprite.setOrigin(GetTextureOrigin(worldObjectType, sf::Vector2f{m_width, m_height}));
     sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 }
 
@@ -243,7 +227,8 @@ void WorldObjectSprite::updateFrameIdx()
 void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
 {
     directionType dir{ worldObject.getDir() };
-    int textureIndex { dirToTextureIdx(dir) };
+    bool isDirectional{ GetTextureType(worldObject.getType()) == textureType::directional };
+    int textureIndex { isDirectional ? dirToTextureIdx(dir) : 0 };
     sprite.setTexture(textures[textureIndex]);
     displayInput camera { reflected ? CAMERA_0 : camera_in };
     screenPos s_pos{ WorldToScreenPos(worldObject.getPos(), camera) };

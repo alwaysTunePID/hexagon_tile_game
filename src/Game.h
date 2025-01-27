@@ -52,9 +52,7 @@ public:
     Game(unsigned seed);
     ~Game();
 
-    void createPlayer(std::string name);
-    void addPlayer(Player player);
-    void removeAllPlayers();
+    void createPlayer(uint16_t id, std::string name);
     void update(gameInput input, int playerId, double dt);
     std::map<int, Tile>& getTiles();
     Tile& getTile(TileIdx tileIdx);
@@ -67,10 +65,9 @@ public:
     void removeAllTiles();
     void addWorldObject(WorldObject& worldObject);
     void checkPlayersInVoid();
-    bool tryMove(Player& player, double dt);
     bool tryMove(WorldObject& worldObject, double dt);
-    bool moveAim(Player& player, double dt);
     bool isWorldObjectPlayer(WorldObject& worldObject, int& playerId);
+    int getPlayerIdToWOId(uint16_t worldObjectId);
     void executeProperties(WorldObject& worldObject);
     void killPlayer(Player& player);
     void moveToSpawn(Player& player);

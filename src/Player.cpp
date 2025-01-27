@@ -9,11 +9,10 @@
 Player::Player()
 {}
 
-Player::Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
+Player::Player(int id, uint16_t characterId, uint16_t aimId, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects)
     : turnTime{ 40 }, name{ name }, 
-      id{ id }, stats{}, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
-      w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{},
-      aimTileId{ 0 }, aimTileIdx{}, aimPos{0.f, 0.f}, aimVel{0.f, 0.f}, 
+      id{ id }, characterId{ characterId }, stats{}, tileIdx{ tileIdx }, pos{0.f, 0.f}, vel{0.f, 0.f}, w_pos{ TileIdxToWorldPos(tileIdx) }, 
+      w_vel{0.f, 0.f, 0.f}, dir{ directionType::up }, spawnTileId{}, aimId{ aimId },
       clock{}, currentPlayer{ false }, lJoyMode{ LJoyMode::move },
       spellOngoing{ false }, selectedSpellIdx{ 0 },
       selectedSpellDirection{ directionType::none },
@@ -26,14 +25,6 @@ Player::Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObj
 
     //std::cout << "World pos player " << id << ":" << w_pos.x << " " << w_pos.y << std::endl; 
 }
-
-Player::Player(playerStats stats, int turnTime, int id, bool currentPlayer)
-    : stats{stats}, turnTime{turnTime}, id{id},
-      clock{}, currentPlayer{currentPlayer}, lJoyMode{ LJoyMode::move },
-      spellOngoing{ false }, selectedSpellIdx{ 0 },
-      selectedSpellDirection{ directionType::none },
-      selectionSpells{}, discoveredSpells{}
-{}
 
 Player::~Player()
 {}
@@ -80,33 +71,23 @@ void Player::setPos(PosInTile posT)
 
 worldPos Player::getWorldPos()
 {
-    return (*worldObjects)[id].getPos(); // DO THIS FOR ALL THE POS STUFF! 
+    return (*worldObjects)[characterId].getPos(); // DO THIS FOR ALL THE POS STUFF! 
 }
 
 void Player::setWorldPos(worldPos posT)
 {
-    (*worldObjects)[id].setPos(posT);
-}
-
-PosInTile& Player::getAimPos()
-{
-    return aimPos;
-}
-
-void Player::setAimPos(PosInTile posT)
-{
-    aimPos = posT;
+    (*worldObjects)[characterId].setPos(posT);
 }
 
 directionType Player::getDir()
 {
-    return (*worldObjects)[id].getDir();;
+    return (*worldObjects)[characterId].getDir();;
 }
 
 // TODO: This should return a vector of ids. 
 int Player::getWorldObjectIds()
 {
-    return id;
+    return characterId;
 }
 
 int Player::getSpawnTileId()
@@ -121,32 +102,22 @@ void Player::setSpawnTileId(int tileIdt)
 
 worldPos Player::getUpdatedPos(double dt)
 {
-    return (*worldObjects)[id].getUpdatedPos(dt);
-}
-
-PosInTile Player::getUpdatedAimPos(double dt)
-{
-    PosInTile updatedPos{
-        aimPos.first + aimVel.first * static_cast<float>(dt),
-        aimPos.second + aimVel.second * static_cast<float>(dt)
-    };
-    return updatedPos;
+    return (*worldObjects)[characterId].getUpdatedPos(dt);
 }
 
 void Player::canTakeInput(bool can)
 {
-    (*worldObjects)[id].canTakeInput(can);
+    (*worldObjects)[characterId].canTakeInput(can);
 }
 
 void Player::setVelocity(moveInput& move)
 {
-    (*worldObjects)[id].setVelocity(move);
+    (*worldObjects)[characterId].setVelocity(move);
 }
 
 void Player::setAimVelocity(moveInput& move)
 {
-    aimVel.first = move.power * std::cos(move.angle);
-    aimVel.second = move.power * std::sin(move.angle);
+    (*worldObjects)[aimId].setVelocity(move);
 }
 
 bool Player::isCurrentPlayer()
@@ -196,20 +167,14 @@ void Player::toggleLJoyMode()
     }
 }
 
-int Player::getAimTileId()
+int Player::getAimId()
 {
-    return aimTileId;
+    return aimId;
 }
 
-void Player::setAimTile(Tile& tile)
+WorldObject& Player::getAimWO()
 {
-    aimTileId = tile.getId();
-    aimTileIdx = tile.getTileIdx();
-}
-
-TileIdx Player::getAimTileIdx()
-{
-    return aimTileIdx;
+    return (*worldObjects)[aimId];
 }
 
 SpellType Player::getSelectedSpell()
@@ -269,16 +234,28 @@ void Player::increaseDeathCounter()
 // Network
 void Player::getAllData(PlayerStruct& m) const
 {
-    m.id       = id;
-    m.stats    = stats;
-    m.turnTime = turnTime;
-    m.name     = name;
+    m.id          = id;
+    m.characterId = characterId;
+    m.stats       = stats;
+    m.turnTime    = turnTime;
+    m.name        = name;
+    m.aimId       = aimId;
+    m.lJoyMode    = lJoyMode;
+    m.selectedSpellIdx       = selectedSpellIdx;
+    m.selectedSpellDirection = selectedSpellDirection;
+    m.selectionSpells        = selectionSpells;
 }
 
 void Player::setAllData(PlayerStruct& m)
 {
-    id       = m.id;
-    stats    = m.stats;
-    turnTime = m.turnTime;
-    name     = m.name;
+    id          = m.id;
+    characterId = m.characterId;
+    stats       = m.stats;
+    turnTime    = m.turnTime;
+    name        = m.name;
+    aimId       = m.aimId;
+    lJoyMode    = m.lJoyMode;
+    selectedSpellIdx       = m.selectedSpellIdx;
+    selectedSpellDirection = m.selectedSpellDirection;
+    selectionSpells        = m.selectionSpells;
 }

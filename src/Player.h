@@ -9,9 +9,15 @@
 
 typedef struct PlayerStruct {
     int id;
+    uint16_t characterId;
     playerStats stats;
     int turnTime;
     std::string name;
+    int aimId;
+    LJoyMode lJoyMode;
+    int selectedSpellIdx;
+    directionType selectedSpellDirection;
+    std::vector<SpellType> selectionSpells;
 } PlayerStruct;
 
 class Player
@@ -20,6 +26,7 @@ private:
     int turnTime;
     std::string name;
     int id;
+    uint16_t characterId;
     playerStats stats;
     TileIdx tileIdx;
     PosInTile pos;
@@ -28,10 +35,7 @@ private:
     worldPos w_vel;
     directionType dir;
     int spawnTileId;
-    int aimTileId;
-    TileIdx aimTileIdx;
-    PosInTile aimPos;
-    VelInTile aimVel;
+    int aimId;
     sf::Clock clock;
     bool currentPlayer;
     LJoyMode lJoyMode;
@@ -44,8 +48,7 @@ private:
 
 public:
     Player();
-    Player(int id, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
-    Player(playerStats stats, int turnTime, int id, bool currentPlayer);
+    Player(int id, uint16_t characterId, uint16_t aimId, std::string name, TileIdx tileIdx, std::map<int, WorldObject>* worldObjects);
     ~Player();
 
     std::string getName();
@@ -58,14 +61,11 @@ public:
     void setPos(PosInTile posT);
     worldPos getWorldPos();
     void setWorldPos(worldPos posT);
-    PosInTile& getAimPos();
-    void setAimPos(PosInTile posT);
     directionType getDir();
     int getWorldObjectIds();
     int getSpawnTileId();
     void setSpawnTileId(int tileIdt);
     worldPos getUpdatedPos(double dt);
-    PosInTile getUpdatedAimPos(double dt);
     void canTakeInput(bool can);
     void setVelocity(moveInput& move);
     void setAimVelocity(moveInput& move);
@@ -75,9 +75,8 @@ public:
     float getTurnTime();
     bool isLJoyMode(LJoyMode mode);
     void toggleLJoyMode();
-    int getAimTileId();
-    void setAimTile(Tile& tile);
-    TileIdx getAimTileIdx();
+    int getAimId();
+    WorldObject& getAimWO();
     SpellType getSelectedSpell();
     int getSelectedSpellIdx();
     void selectNextSpell();

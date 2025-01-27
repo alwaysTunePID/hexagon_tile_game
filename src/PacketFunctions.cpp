@@ -194,18 +194,44 @@ sf::Packet& operator >>(sf::Packet& packet, playerStats& m)
 // Player
 sf::Packet& operator <<(sf::Packet& packet, const PlayerStruct& m)
 {
-    return packet << (sf::Uint16)m.id << m.stats << (sf::Uint16)m.turnTime << m.name;
+    packet = packet << (sf::Uint16)m.id << m.characterId << m.stats << (sf::Uint16)m.turnTime 
+                    << m.name << (sf::Uint16)m.aimId << (sf::Int8)m.lJoyMode << (sf::Uint8)m.selectedSpellIdx
+                    << (sf::Int8)m.selectedSpellDirection;
+
+    packet = packet << (sf::Uint8)m.selectionSpells.size();
+    for (auto spell : m.selectionSpells)
+    {
+        packet = packet << (sf::Int8)spell;
+    }
+    return packet;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
 {
     sf::Uint16 id;
     sf::Uint16 turnTime;
+    sf::Uint16 aimId;
+    sf::Int8   lJoyMode;
+    sf::Uint8  selectedSpellIdx;
+    sf::Int8   selectedSpellDirection;
+    sf::Uint8  numOfSpells;
+    sf::Int8   spell;
 
-    packet = packet >> id >> m.stats >> turnTime >> m.name;
+    packet = packet >> id >> m.characterId >> m.stats >> turnTime >> m.name >> aimId >> lJoyMode >> selectedSpellIdx >> selectedSpellDirection;
 
     m.id       = (int)id;
     m.turnTime = (int)turnTime;
+    m.aimId    = (int)aimId;
+    m.lJoyMode = (LJoyMode)lJoyMode;
+    m.selectedSpellIdx       = (int)selectedSpellIdx;
+    m.selectedSpellDirection = (directionType)selectedSpellDirection;
+
+    packet = packet >> numOfSpells;
+    for (sf::Uint8 i{ 0 }; i < numOfSpells; i++)
+    {
+        packet = packet >> spell;
+        m.selectionSpells.push_back((SpellType)spell);
+    }
 
     return packet;
 }

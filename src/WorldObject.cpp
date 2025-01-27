@@ -8,13 +8,13 @@ WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
       width{ GetHitbox(type).x / 42.f },
       height{ GetHitbox(type).y / 42.f },
-      origin{}, moving{ false }, takeInput{true}, effects{}, wosWithDelta{ wosWithDelta }
+      origin{}, moving{ false }, takeInput{true}, fallable{ GetCanFall(type) }, collideable{ GetCollideable(type) }, effects{}, wosWithDelta{ wosWithDelta }
 {
     wosWithDelta->insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, effects{}, wosWithDelta{}
+    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, fallable{}, collideable{}, effects{}, wosWithDelta{}
 {}
 
 WorldObject::~WorldObject()
@@ -28,6 +28,12 @@ uint16_t WorldObject::getId()
 WorldObjectType WorldObject::getType()
 {
     return type;
+}
+
+void WorldObject::setType(WorldObjectType newType)
+{
+    type = newType;
+    wosWithDelta->insert(id);   
 }
 
 worldPos WorldObject::getPos()
@@ -100,7 +106,7 @@ bool WorldObject::isIntersecting(WorldObject& worldObject)
                 intersecting = true;
         }
 
-        if (intersecting)
+        if (intersecting && collideable && worldObject.isCollideable())
         {
             float len{ std::sqrt(d) };
             float okLen{ std::sqrt(r_sum) };
@@ -120,6 +126,16 @@ bool WorldObject::isIntersecting(WorldObject& worldObject)
 void WorldObject::canTakeInput(bool can)
 {
     takeInput = can;
+}
+
+bool WorldObject::canFall()
+{
+    return fallable;
+}
+
+bool WorldObject::isCollideable()
+{
+    return collideable;
 }
 
 void WorldObject::setVelocity(worldPos& velIn)
@@ -197,4 +213,6 @@ void WorldObject::setAllData(WorldObjectStruct& m)
     width  = m.width;
     height = m.height;
     origin = m.origin;
+
+    tileIdx = WorldPosToTileIdx(m.pos);
 }

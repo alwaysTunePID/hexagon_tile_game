@@ -170,6 +170,21 @@ inline worldPos NormalToScreenVec(worldPos n_vec)
     return s_vec;
 }
 
+inline worldPos CalcWorldVelVec(worldPos fromPos, worldPos destination, float speed)
+{
+    worldPos vel{
+        destination.x - fromPos.x,
+        destination.y - fromPos.y,
+        destination.z - fromPos.z
+    };
+    double k{ speed / worldPosLen(vel)};
+
+    vel.x = k * vel.x;
+    vel.y = k * vel.y;
+    vel.z = k * vel.z;
+    return vel;
+}
+
 /*
 bool IsZero(worldPos vec, double epsilon = 0.0001)
 {
