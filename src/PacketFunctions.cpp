@@ -248,6 +248,12 @@ sf::Packet& operator <<(sf::Packet& packet, const GameStruct& m)
         packet = packet << worldObjectS;
     }
 
+    packet = packet << (sf::Uint8)m.wosToDelete.size();
+    for (int id : m.wosToDelete)
+    {
+        packet = packet << (sf::Uint16)id;
+    }
+
     packet = packet << (sf::Uint16)m.tiles.size();
     for (auto& [id, tileS] : m.tiles)
     {
@@ -270,6 +276,8 @@ sf::Packet& operator >>(sf::Packet& packet, GameStruct& m)
     sf::Uint16 boardSize;
     sf::Uint16 numOfWorldObjects;
     WorldObjectStruct worldObjectS;
+    sf::Uint8 numOfWOToDelete;
+    sf::Uint16 worldObjectId;
     sf::Uint16 numOfTiles;
     TileStruct tileS;
     sf::Uint8  numOfPlayers;
@@ -286,6 +294,13 @@ sf::Packet& operator >>(sf::Packet& packet, GameStruct& m)
     {
         packet = packet >> worldObjectS;
         m.worldObjects.insert({ worldObjectS.id, worldObjectS });
+    }
+
+    packet = packet >> numOfWOToDelete;
+    for (sf::Uint8 i{ 0 }; i < numOfWOToDelete; i++)
+    {
+        packet = packet >> worldObjectId;
+        m.wosToDelete.push_back((int)worldObjectId);
     }
 
     packet = packet >> numOfTiles;

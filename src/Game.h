@@ -17,6 +17,7 @@ typedef struct GameStruct {
     int currentPlayer;
     std::map<int, PlayerStruct> players;
     std::map<int, WorldObjectStruct> worldObjects;
+    std::vector<int> wosToDelete;
     stateType state;
     int boardSize;
     BoardStruct board;
@@ -37,8 +38,7 @@ private:
     std::map<int, Player> players;
     std::map<int, WorldObject> worldObjects;
     std::map<int, Fire> effects;
-    std::unordered_set<int> tilesWithDelta;
-    std::unordered_set<int> wosWithDelta;
+    std::map<sf::Uint8, GameDeltas> deltas;
     stateType state;
     int boardSize;
     Board board;
@@ -64,6 +64,7 @@ public:
     void addTile(Tile tile, TileIdx tileIdx);
     void removeAllTiles();
     void addWorldObject(WorldObject& worldObject);
+    void deleteWorldObject(int worldObjectId);
     void checkPlayersInVoid();
     bool tryMove(WorldObject& worldObject, double dt);
     bool isWorldObjectPlayer(WorldObject& worldObject, int& playerId);
@@ -98,7 +99,8 @@ public:
     // Network
     void getAllData(GameStruct& m) const;
     void setAllData(GameStruct& m);
-    void getDeltaData(GameStruct& m) const;
+    void clearDeltaData(sf::Uint8 playerId);
+    void getDeltaData(GameStruct& m, sf::Uint8 playerId) const;
     void setDeltaData(GameStruct& m);
 };
 

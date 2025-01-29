@@ -10,7 +10,7 @@
 #include "Board.h"
 
 Game::Game(unsigned seed)
-    : tileId{ 0 }, effectId { 0 }, objectId { 0 }, players{}, worldObjects{}, effects{}, tilesWithDelta{}, wosWithDelta{}, boardSize { 8 }, board{ boardSize },
+    : tileId{ 0 }, effectId { 0 }, objectId { 0 }, players{}, worldObjects{}, effects{}, deltas{}, boardSize { 8 }, board{ boardSize },
       state { stateType::lobby }, seed{seed}
 {
     castedSpellData castedSpell{};
@@ -28,9 +28,11 @@ void Game::createPlayer(uint16_t id, std::string name)
     uint16_t newCharacterId{ getNewObjectId() };
     uint16_t newAimId{ getNewObjectId() };
     TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(id) };
+    //tilesWithDelta{}, wosWithDelta{}, wosToDelete{}
+    deltas.insert({ (sf::Uint8)id, GameDeltas{{},{},{}} });
 
-    WorldObject worldObject{ newCharacterId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &wosWithDelta };
-    WorldObject aimWorldObject{ newAimId, WorldObjectType::visual, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+    WorldObject worldObject{ newCharacterId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &deltas };
+    WorldObject aimWorldObject{ newAimId,    WorldObjectType::visual, TileIdxToWorldPos(tileIdx), &deltas };
     addWorldObject(worldObject);
     addWorldObject(aimWorldObject);
 
@@ -42,9 +44,6 @@ void Game::createPlayer(uint16_t id, std::string name)
 
 void Game::update(gameInput input, int playerId, double dt)
 {
-    // BUG!! You can't clear delta when not sent to all clients... probably the reason to the tile highlighted issue
-    tilesWithDelta.clear();
-    wosWithDelta.clear();
     //TODO: Temp hardcoding!
     //playerId = currentPlayer;
     //std::vector<Tile> playerBlocks {};
@@ -129,7 +128,7 @@ void Game::update(gameInput input, int playerId, double dt)
         }
 
 
-        updateCastedSpells();
+        //updateCastedSpells();
 
         if (actionTaken || newLevel)
         {
@@ -227,6 +226,21 @@ void Game::removeAllTiles()
 void Game::addWorldObject(WorldObject& worldObject)
 {
     worldObjects.insert({ worldObject.getId(), worldObject });
+}
+
+// Can't be called while iterating through the worldObjects map
+void Game::deleteWorldObject(int worldObjectId)
+{
+    for (auto& [playerId, delta] : deltas)
+    {
+        delta.wosToDelete.insert(worldObjectId);
+        delta.wosWithDelta.erase(worldObjectId);
+    }
+
+    if (worldObjects.erase(worldObjectId) == (size_t)0 )
+    {
+        std::cout << "ERROR: Tried to erase non-existing WorldObject with id: " << worldObjectId << std::endl;
+    }
 }
 
 void Game::checkPlayersInVoid()
@@ -359,7 +373,7 @@ void Game::castSpell()
     worldPos vel{ CalcWorldVelVec(fromPos, destination, speed) };
 
     uint16_t id{ getNewObjectId() };
-    WorldObject fireball{ id, WorldObjectType::fireball, fromPos, &wosWithDelta };
+    WorldObject fireball{ id, WorldObjectType::fireball, fromPos, &deltas };
     fireball.setVelocity(vel);
     fireball.setPos(fireball.getUpdatedPos(0.3));
     addWorldObject(fireball);
@@ -405,6 +419,7 @@ void Game::updatePosOfWorldObjects(double dt)
     }
 
     std::vector<int> handledIds{};
+    std::vector<int> worldObjectsToRemove{};
     for(int id : movedWorldObjects)
     {
         auto& worldObject{ worldObjects.at(id) };
@@ -418,18 +433,22 @@ void Game::updatePosOfWorldObjects(double dt)
             {
                 if (worldObject.isCollideable() && worldObject2.isCollideable())
                 {
-                    std::cout << ToString(worldObject.getType()) << " collided with " << ToString(worldObject2.getType()) << std::endl;
+                    //std::cout << ToString(worldObject.getType()) << " collided with " << ToString(worldObject2.getType()) << std::endl;
                     Tile& tile{ tiles.at(board.getTileId(worldObject2.getTileIdx())) };
                     tileType newTileType{ GetTileFromCollision(tile.getTileType(), worldObject.getType()) };
                     if (newTileType != tileType::last)
                         tile.setType(newTileType);
+
                     collisionOutcome collOutcome{ GetWorldObjectsFromCollision(worldObject.getType(), worldObject2.getType()) };
-                    // TODO: Handle the remove part as well!
-                    if (collOutcome.movedWO != WorldObjectType::last)
+                    if (collOutcome.movedWO == WorldObjectType::remove)
+                        worldObjectsToRemove.push_back(id);
+                    else if (collOutcome.movedWO != WorldObjectType::last)
                         worldObject.setType(collOutcome.movedWO);
-                    if (collOutcome.worldObject != WorldObjectType::last)
+
+                    if (collOutcome.worldObject == WorldObjectType::remove)
+                        worldObjectsToRemove.push_back(id2);
+                    else if (collOutcome.worldObject != WorldObjectType::last)
                         worldObject2.setType(collOutcome.worldObject);
-                    //std::cout << "Collision between: " << ToString(worldObject.getType()) << " " << ToString(worldObject2.getType()) << std::endl; 
                     moveInput zeroVel{ 0.f, 0 };
                     worldObject.setVelocity(zeroVel);
                 }
@@ -437,6 +456,9 @@ void Game::updatePosOfWorldObjects(double dt)
         }
         handledIds.push_back(id);
     }
+
+    for (int id : worldObjectsToRemove)
+        deleteWorldObject(id);
 }
 
 void Game::updateCastedSpells()
@@ -569,7 +591,7 @@ void Game::addAssociateObject(Tile& tile, TileIdx tileIdx)
     if (tile.getTileType() == tileType::mountain)
     {
         uint16_t id{ getNewObjectId() };
-        WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx), &wosWithDelta };
+        WorldObject mountain{ id, WorldObjectType::mountain, TileIdxToWorldPos(tileIdx), &deltas };
         addWorldObject(mountain);
     }
 }
@@ -592,7 +614,7 @@ void Game::generateLevel()
                 continue;
 
             tileType type{ static_cast<tileType>(dist_objects(generator)) };            
-            Tile tile{ type, getNewTileId(), &tilesWithDelta };
+            Tile tile{ type, getNewTileId(), &deltas };
 
             if (isASpawnTile(tileIdx))
             {
@@ -698,10 +720,17 @@ void Game::setAllData(GameStruct& m)
     board.setAllData(m.board);
 }
 
-void Game::getDeltaData(GameStruct& m) const
+void Game::clearDeltaData(sf::Uint8 playerId)
+{
+    deltas.at(playerId).tilesWithDelta.clear();
+    deltas.at(playerId).wosWithDelta.clear();
+    deltas.at(playerId).wosToDelete.clear();
+}
+
+void Game::getDeltaData(GameStruct& m, sf::Uint8 playerId) const
 {
     // TODO: Continue to make delta of everything
-    for (auto id : tilesWithDelta)
+    for (auto id : deltas.at(playerId).tilesWithDelta)
     {
         TileStruct tileS;
         tiles.at(id).getAllData(tileS);
@@ -717,12 +746,15 @@ void Game::getDeltaData(GameStruct& m) const
         m.players.insert({id, playerS});
     }
 
-    for (auto id : wosWithDelta)
+    for (auto id : deltas.at(playerId).wosWithDelta)
     {
         WorldObjectStruct worldObjectS;
         worldObjects.at(id).getAllData(worldObjectS);
         m.worldObjects.insert({id, worldObjectS});
     }
+
+    for (auto id : deltas.at(playerId).wosToDelete)
+        m.wosToDelete.push_back(id);
 
     m.state = state;
     m.boardSize = boardSize;
@@ -759,6 +791,9 @@ void Game::setDeltaData(GameStruct& m)
         worldObj.setAllData(worldObjectS);
         worldObjects.insert({id, worldObj});
     }
+
+    for (int id : m.wosToDelete)
+        worldObjects.erase(id);
 
     state = m.state;
     boardSize = m.boardSize;

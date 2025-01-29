@@ -27,11 +27,11 @@ private:
     bool active;
     bool highlighted;
     std::vector<effectData> properties;
-    std::unordered_set<int>* tilesWithDelta;
+    std::map<sf::Uint8, GameDeltas>* deltas;
 
 public:
     Tile();
-    Tile(tileType blocktype, int idt, std::unordered_set<int>* tilesWithDelta);
+    Tile(tileType blocktype, int idt, std::map<sf::Uint8, GameDeltas>* deltas);
     ~Tile();
 
     TileIdx getTileIdx();

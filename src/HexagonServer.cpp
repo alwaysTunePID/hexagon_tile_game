@@ -177,9 +177,10 @@ int main()
                     }
                     else
                     {
-                        game.getDeltaData(gameMsg);
+                        game.getDeltaData(gameMsg, (sf::Uint8)id);
                         packet << (sf::Int8)PackageType::delta << gameMsg;
                         socket.send(packet, clientdata.ip, clientdata.port);
+                        game.clearDeltaData((sf::Uint8)id);
                     }                      
                     break;
                 }

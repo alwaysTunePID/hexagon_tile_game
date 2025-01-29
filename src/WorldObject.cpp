@@ -4,17 +4,18 @@
 #include "Transformations.h"
 
 // Todo  38.f was derived through testing just. Magick number
-WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta)
+WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<sf::Uint8, GameDeltas>* deltas)
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
       width{ GetHitbox(type).x / 42.f },
       height{ GetHitbox(type).y / 42.f },
-      origin{}, moving{ false }, takeInput{true}, fallable{ GetCanFall(type) }, collideable{ GetCollideable(type) }, effects{}, wosWithDelta{ wosWithDelta }
+      origin{}, moving{ false }, takeInput{true}, fallable{ GetCanFall(type) }, collideable{ GetCollideable(type) }, effects{}, deltas{ deltas }
 {
-    wosWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.wosWithDelta.insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, fallable{}, collideable{}, effects{}, wosWithDelta{}
+    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, fallable{}, collideable{}, effects{}, deltas{}
 {}
 
 WorldObject::~WorldObject()
@@ -33,7 +34,8 @@ WorldObjectType WorldObject::getType()
 void WorldObject::setType(WorldObjectType newType)
 {
     type = newType;
-    wosWithDelta->insert(id);   
+    for (auto& [playerId, delta] : *deltas)
+        delta.wosWithDelta.insert(id);
 }
 
 worldPos WorldObject::getPos()
@@ -46,7 +48,8 @@ void WorldObject::setPos(worldPos w_pos)
     pos = w_pos;
     tileIdx = WorldPosToTileIdx(w_pos);
     // Change so that this doesn't happen if pos is unchanged.
-    wosWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.wosWithDelta.insert(id);
 }
 
 directionType WorldObject::getDir()
@@ -141,7 +144,8 @@ bool WorldObject::isCollideable()
 void WorldObject::setVelocity(worldPos& velIn)
 {
     vel = velIn;
-    wosWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.wosWithDelta.insert(id);
     // Temp: Got linking problems when trying to make this a function somewhere
     double epsilon = 0.0001;
     moving = !(std::fabs(vel.x) < epsilon && std::fabs(vel.y) < epsilon && std::fabs(vel.z) < epsilon);
@@ -152,7 +156,8 @@ void WorldObject::setVelocity(moveInput& move)
 {
     if (takeInput)
         vel = InputToWorldVel(move);
-    wosWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.wosWithDelta.insert(id);
 
     // Temp: Got linking problems when trying to make this a function somewhere
     double epsilon = 0.0001;

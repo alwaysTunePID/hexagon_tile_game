@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <array>
 #include <chrono>
+#include <unordered_set>
 #include <math.h>
 #include <string>
 #include <utility>
@@ -64,6 +65,12 @@ typedef struct playerStats {
     uint16_t kills;
     uint16_t deaths;
 } playerStats;
+
+typedef struct GameDeltas {
+    std::unordered_set<int> tilesWithDelta;
+    std::unordered_set<int> wosWithDelta;
+    std::unordered_set<int> wosToDelete;
+} GameDeltas;
 
 const TileIdx OOB_TILE{ 300, 300 }; // Out of Bounds
 

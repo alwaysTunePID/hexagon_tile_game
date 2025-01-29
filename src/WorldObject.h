@@ -36,10 +36,10 @@ private:
     bool fallable;
     bool collideable;
     std::vector<Fire> effects;
-    std::unordered_set<int>* wosWithDelta;
+    std::map<sf::Uint8, GameDeltas>* deltas;
 
 public:
-    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::unordered_set<int>* wosWithDelta);
+    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<sf::Uint8, GameDeltas>* deltas);
     WorldObject();
     ~WorldObject();
 

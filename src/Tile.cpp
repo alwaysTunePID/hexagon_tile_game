@@ -4,11 +4,11 @@
 #include "Tile.h"
 
 Tile::Tile()
-    : id{}, tileIdx{}, dir{}, type{}, effect{}, active{}, highlighted{}, properties{}, tilesWithDelta{}
+    : id{}, tileIdx{}, dir{}, type{}, effect{}, active{}, highlighted{}, properties{}, deltas{}
 {}
 
-Tile::Tile(tileType tileType, int idt, std::unordered_set<int>* tilesWithDelta)
-    : id{ idt }, tileIdx{ 0, 0 }, dir{}, type{ tileType }, effect{}, active{ false }, highlighted{ false }, properties{}, tilesWithDelta{ tilesWithDelta }
+Tile::Tile(tileType tileType, int idt, std::map<sf::Uint8, GameDeltas>* deltas)
+    : id{ idt }, tileIdx{ 0, 0 }, dir{}, type{ tileType }, effect{}, active{ false }, highlighted{ false }, properties{}, deltas{ deltas }
 {
     switch (GetTextureType(type))
     {
@@ -22,7 +22,8 @@ Tile::Tile(tileType tileType, int idt, std::unordered_set<int>* tilesWithDelta)
     }
 
     properties.push_back({GetInheritEffect(type), directionType::none});
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 
@@ -38,7 +39,8 @@ TileIdx Tile::getTileIdx()
 void Tile::setTileIdx(TileIdx tilet)
 {
     tileIdx = tilet;
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 directionType Tile::getDirection()
@@ -49,7 +51,8 @@ directionType Tile::getDirection()
 void Tile::setDirection(directionType direction)
 {
     dir = direction;
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 bool Tile::isActive()
@@ -60,7 +63,8 @@ bool Tile::isActive()
 void Tile::setActive(bool activeT)
 {
     active = activeT;
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 bool Tile::isHighlighted()
@@ -71,7 +75,8 @@ bool Tile::isHighlighted()
 void Tile::setHighlighted(bool highlightedT)
 {
     highlighted = highlightedT;
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 tileType Tile::getTileType()
@@ -99,7 +104,8 @@ void Tile::setType(tileType newType)
         dir = directionType::up;
     }
 
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 int Tile::getId()
@@ -122,7 +128,8 @@ void Tile::activateEffect(EffectType effectType)
         if (effect.type == effectType)
         {
             effect.active = true;
-            tilesWithDelta->insert(id);
+            for (auto& [playerId, delta] : *deltas)
+                delta.tilesWithDelta.insert(id);
             return;
         }
     }
@@ -135,7 +142,8 @@ void Tile::deactivateEffect(EffectType effectType)
         if (effect.type == effectType)
         {
             effect.active = false;
-            tilesWithDelta->insert(id);
+            for (auto& [playerId, delta] : *deltas)
+                delta.tilesWithDelta.insert(id);
             return;
         }
     }
@@ -144,7 +152,8 @@ void Tile::deactivateEffect(EffectType effectType)
 void Tile::addEffect(effectData effect)
 {
     properties.push_back(effect);
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 std::vector<effectData>& Tile::getProperties()
@@ -155,7 +164,8 @@ std::vector<effectData>& Tile::getProperties()
 void Tile::clearProperties()
 {
     properties.clear();
-    tilesWithDelta->insert(id);
+    for (auto& [playerId, delta] : *deltas)
+        delta.tilesWithDelta.insert(id);
 }
 
 // Network
