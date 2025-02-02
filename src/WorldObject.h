@@ -2,6 +2,7 @@
 #define WORLDOBJECT_H
 
 #include <vector>
+#include <map>
 #include <unordered_set>
 #include "Enums.h"
 #include "Fire.h"
@@ -36,10 +37,10 @@ private:
     bool fallable;
     bool collideable;
     std::vector<Fire> effects;
-    std::map<sf::Uint8, GameDeltas>* deltas;
+    std::map<uint8_t, GameDeltas>* deltas;
 
 public:
-    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<sf::Uint8, GameDeltas>* deltas);
+    WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<uint8_t, GameDeltas>* deltas);
     WorldObject();
     ~WorldObject();
 

@@ -8,7 +8,7 @@
 /*
 Packets have built-in operator >> and << overloads for standard types:
 * bool
-* fixed-size integer types (sf::Int8/16/32, sf::Uint8/16/32)
+* fixed-size integer types (int8_t/16/32, uint8_t/16/32)
 * floating point numbers (float, double)
 * string types (char*, wchar_t*, std::string, std::wstring, sf::String)
 */
@@ -27,13 +27,13 @@ sf::Packet& operator >>(sf::Packet& packet, moveInput& m)
 // gameInput
 sf::Packet& operator <<(sf::Packet& packet, const gameInput& m)
 {
-    return packet << (sf::Int8)m.button << (sf::Int8)m.action << m.move;
+    return packet << (int8_t)m.button << (int8_t)m.action << m.move;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, gameInput& m)
 {
-    sf::Int8 button;
-    sf::Int8 action;
+    int8_t button;
+    int8_t action;
     packet = packet >> button >> action >> m.move;
 
     m.button = (xbox)button;
@@ -58,15 +58,15 @@ sf::Packet& operator >>(sf::Packet& packet, worldPos& m)
 sf::Packet& operator <<(sf::Packet& packet, const WorldObjectStruct& m)
 {
     // TODO: add handling of this member: std::vector<Fire> effects
-    return packet << m.id << (sf::Int8)m.type << m.pos << m.vel
-                  << m.acc << (sf::Int8)m.dir << m.width << m.height
+    return packet << m.id << (int8_t)m.type << m.pos << m.vel
+                  << m.acc << (int8_t)m.dir << m.width << m.height
                   << m.origin.x << m.origin.y;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m)
 {
-    sf::Int8 type;
-    sf::Int8 dir;
+    int8_t type;
+    int8_t dir;
 
     packet = packet >> m.id >> type >> m.pos >> m.vel
                     >> m.acc >> dir >> m.width >> m.height
@@ -81,7 +81,7 @@ sf::Packet& operator >>(sf::Packet& packet, WorldObjectStruct& m)
 // WorldObjectList
 sf::Packet& operator <<(sf::Packet& packet, const WorldObjectListStruct& m)
 {
-    packet = packet << (sf::Uint16)m.worldObjects.size();
+    packet = packet << (uint16_t)m.worldObjects.size();
     for (auto& [id, worldObjectS] : m.worldObjects)
     {
         packet = packet << worldObjectS;
@@ -92,11 +92,11 @@ sf::Packet& operator <<(sf::Packet& packet, const WorldObjectListStruct& m)
 
 sf::Packet& operator >>(sf::Packet& packet, WorldObjectListStruct& m)
 {
-    sf::Uint16 numOfWorldObjects;
+    uint16_t numOfWorldObjects;
     WorldObjectStruct worldObjectS;
 
     packet = packet >> numOfWorldObjects;
-    for (sf::Uint16 i{ 0 }; i < numOfWorldObjects; i++)
+    for (uint16_t i{ 0 }; i < numOfWorldObjects; i++)
     {
         packet = packet >> worldObjectS;
         m.worldObjects.insert({ worldObjectS.id, worldObjectS });
@@ -108,13 +108,13 @@ sf::Packet& operator >>(sf::Packet& packet, WorldObjectListStruct& m)
 //TileIdx
 sf::Packet& operator <<(sf::Packet& packet, const TileIdx& m)
 {
-    return packet << (sf::Int32)m.first << (sf::Int32)m.second;
+    return packet << (int32_t)m.first << (int32_t)m.second;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, TileIdx& m)
 {
-    sf::Int32 first;
-    sf::Int32 second;
+    int32_t first;
+    int32_t second;
 
     packet = packet >> first >> second;
 
@@ -127,16 +127,16 @@ sf::Packet& operator >>(sf::Packet& packet, TileIdx& m)
 // Tile
 sf::Packet& operator <<(sf::Packet& packet, const TileStruct& m)
 {
-    return packet << (sf::Uint16)m.id << m.tileIdx << (sf::Int8)m.dir << (sf::Int8)m.type
-                  << (sf::Int8)m.effect << m.active << m.highlighted;
+    return packet << (uint16_t)m.id << m.tileIdx << (int8_t)m.dir << (int8_t)m.type
+                  << (int8_t)m.effect << m.active << m.highlighted;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, TileStruct& m)
 {
-    sf::Uint16 id;
-    sf::Int8   dir;
-    sf::Int8   type;
-    sf::Int8   effect;
+    uint16_t id;
+    int8_t   dir;
+    int8_t   type;
+    int8_t   effect;
 
     packet = packet >> id >> m.tileIdx >> dir >> type
                     >> effect >> m.active >> m.highlighted;
@@ -152,26 +152,26 @@ sf::Packet& operator >>(sf::Packet& packet, TileStruct& m)
 // Board
 sf::Packet& operator <<(sf::Packet& packet, const BoardStruct& m)
 {
-    packet = packet << (sf::Uint16)m.size << (sf::Uint16)m.tiles.size();
+    packet = packet << (uint16_t)m.size << (uint16_t)m.tiles.size();
 
     for (auto& [tileIdx, id] : m.tiles)
     {
-        packet = packet << tileIdx << (sf::Uint16)id;
+        packet = packet << tileIdx << (uint16_t)id;
     }
     return packet;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, BoardStruct& m)
 {
-    sf::Uint16 size;
-    sf::Uint16 numOfTiles;
+    uint16_t size;
+    uint16_t numOfTiles;
     TileIdx tileIdx;
-    sf::Uint16 id;
+    uint16_t id;
 
     packet = packet >> size >> numOfTiles;
     m.size = (int)size;
 
-    for (sf::Uint16 i{ 0 }; i < numOfTiles; i++)
+    for (uint16_t i{ 0 }; i < numOfTiles; i++)
     {
         packet = packet >> tileIdx >> id;
         m.tiles.insert({ tileIdx, (int)id });
@@ -194,28 +194,28 @@ sf::Packet& operator >>(sf::Packet& packet, playerStats& m)
 // Player
 sf::Packet& operator <<(sf::Packet& packet, const PlayerStruct& m)
 {
-    packet = packet << (sf::Uint16)m.id << m.characterId << m.stats << (sf::Uint16)m.turnTime 
-                    << m.name << (sf::Uint16)m.aimId << (sf::Int8)m.lJoyMode << (sf::Uint8)m.selectedSpellIdx
-                    << (sf::Int8)m.selectedSpellDirection;
+    packet = packet << (uint16_t)m.id << m.characterId << m.stats << (uint16_t)m.turnTime 
+                    << m.name << (uint16_t)m.aimId << (int8_t)m.lJoyMode << (uint8_t)m.selectedSpellIdx
+                    << (int8_t)m.selectedSpellDirection;
 
-    packet = packet << (sf::Uint8)m.selectionSpells.size();
+    packet = packet << (uint8_t)m.selectionSpells.size();
     for (auto spell : m.selectionSpells)
     {
-        packet = packet << (sf::Int8)spell;
+        packet = packet << (int8_t)spell;
     }
     return packet;
 }
 
 sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
 {
-    sf::Uint16 id;
-    sf::Uint16 turnTime;
-    sf::Uint16 aimId;
-    sf::Int8   lJoyMode;
-    sf::Uint8  selectedSpellIdx;
-    sf::Int8   selectedSpellDirection;
-    sf::Uint8  numOfSpells;
-    sf::Int8   spell;
+    uint16_t id;
+    uint16_t turnTime;
+    uint16_t aimId;
+    int8_t   lJoyMode;
+    uint8_t  selectedSpellIdx;
+    int8_t   selectedSpellDirection;
+    uint8_t  numOfSpells;
+    int8_t   spell;
 
     packet = packet >> id >> m.characterId >> m.stats >> turnTime >> m.name >> aimId >> lJoyMode >> selectedSpellIdx >> selectedSpellDirection;
 
@@ -227,7 +227,7 @@ sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
     m.selectedSpellDirection = (directionType)selectedSpellDirection;
 
     packet = packet >> numOfSpells;
-    for (sf::Uint8 i{ 0 }; i < numOfSpells; i++)
+    for (uint8_t i{ 0 }; i < numOfSpells; i++)
     {
         packet = packet >> spell;
         m.selectionSpells.push_back((SpellType)spell);
@@ -239,28 +239,28 @@ sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
 // Game
 sf::Packet& operator <<(sf::Packet& packet, const GameStruct& m)
 {
-    packet = packet << (sf::Uint8)m.currentPlayer << (sf::Int8)m.state
-                    << (sf::Uint16)m.boardSize << m.board;
+    packet = packet << (uint8_t)m.currentPlayer << (int8_t)m.state
+                    << (uint16_t)m.boardSize << m.board;
 
-    packet = packet << (sf::Uint16)m.worldObjects.size();
+    packet = packet << (uint16_t)m.worldObjects.size();
     for (auto& [id, worldObjectS] : m.worldObjects)
     {
         packet = packet << worldObjectS;
     }
 
-    packet = packet << (sf::Uint8)m.wosToDelete.size();
+    packet = packet << (uint8_t)m.wosToDelete.size();
     for (int id : m.wosToDelete)
     {
-        packet = packet << (sf::Uint16)id;
+        packet = packet << (uint16_t)id;
     }
 
-    packet = packet << (sf::Uint16)m.tiles.size();
+    packet = packet << (uint16_t)m.tiles.size();
     for (auto& [id, tileS] : m.tiles)
     {
         packet = packet << tileS;
     }
 
-    packet = packet << (sf::Uint8)m.players.size();
+    packet = packet << (uint8_t)m.players.size();
     for (auto& [id, playerS] : m.players)
     {
         packet = packet << playerS;
@@ -271,16 +271,16 @@ sf::Packet& operator <<(sf::Packet& packet, const GameStruct& m)
 
 sf::Packet& operator >>(sf::Packet& packet, GameStruct& m)
 {
-    sf::Uint8  currentPlayer;
-    sf::Int8   state;
-    sf::Uint16 boardSize;
-    sf::Uint16 numOfWorldObjects;
+    uint8_t  currentPlayer;
+    int8_t   state;
+    uint16_t boardSize;
+    uint16_t numOfWorldObjects;
     WorldObjectStruct worldObjectS;
-    sf::Uint8 numOfWOToDelete;
-    sf::Uint16 worldObjectId;
-    sf::Uint16 numOfTiles;
+    uint8_t numOfWOToDelete;
+    uint16_t worldObjectId;
+    uint16_t numOfTiles;
     TileStruct tileS;
-    sf::Uint8  numOfPlayers;
+    uint8_t  numOfPlayers;
     PlayerStruct playerS;
 
     packet = packet >> currentPlayer >> state >> boardSize >> m.board;
@@ -290,28 +290,28 @@ sf::Packet& operator >>(sf::Packet& packet, GameStruct& m)
     m.boardSize = (int)boardSize;
 
     packet = packet >> numOfWorldObjects;
-    for (sf::Uint16 i{ 0 }; i < numOfWorldObjects; i++)
+    for (uint16_t i{ 0 }; i < numOfWorldObjects; i++)
     {
         packet = packet >> worldObjectS;
         m.worldObjects.insert({ worldObjectS.id, worldObjectS });
     }
 
     packet = packet >> numOfWOToDelete;
-    for (sf::Uint8 i{ 0 }; i < numOfWOToDelete; i++)
+    for (uint8_t i{ 0 }; i < numOfWOToDelete; i++)
     {
         packet = packet >> worldObjectId;
         m.wosToDelete.push_back((int)worldObjectId);
     }
 
     packet = packet >> numOfTiles;
-    for (sf::Uint16 i{ 0 }; i < numOfTiles; i++)
+    for (uint16_t i{ 0 }; i < numOfTiles; i++)
     {
         packet = packet >> tileS;
         m.tiles.insert({ tileS.id, tileS });
     }
 
     packet = packet >> numOfPlayers;
-    for (sf::Uint8 i{ 0 }; i < numOfPlayers; i++)
+    for (uint8_t i{ 0 }; i < numOfPlayers; i++)
     {
         packet = packet >> playerS;
         m.players.insert({ playerS.id, playerS });

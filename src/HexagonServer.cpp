@@ -20,7 +20,6 @@ typedef struct clientData {
 std::map<size_t, clientData> clients{};
 size_t numOfPlayers{ 2 };
 
-sf::IpAddress serverIp;
 unsigned short port{ 55001 };
 
 ///////////////// Functions ////////////////////////////
@@ -32,7 +31,7 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
         sf::Packet packet;
         //char r_data[100];
         //std::size_t received{ 0 };
-        sf::IpAddress sender;
+        std::optional<sf::IpAddress> sender;
         unsigned short clientPort;
 
         //sf::Socket::Status status = socket.receive(r_data, (std::size_t)100, received, sender, clientPort);
@@ -49,13 +48,13 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
                 bool isNewClient{ true };
                 for (auto& [id, clientdata] : clients)
                 {
-                    if (clientdata.ip == sender && clientdata.port == clientPort && clientdata.name == name)
+                    if (clientdata.ip == sender.value() && clientdata.port == clientPort && clientdata.name == name)
                     {
                         clientdata.lastSentMsgTime = Time::now();
                         clientdata.connected = true;
                         packet.clear();
                         packet << gameStatus;
-                        if (socket.send(packet, sender, clientPort) != sf::Socket::Status::Done)
+                        if (socket.send(packet, sender.value(), clientPort) != sf::Socket::Status::Done)
                             std::cout << "ERROR - Couldn't send data" << std::endl;
                         isNewClient = false;
                         break;
@@ -65,14 +64,14 @@ void waitForAllClientsToSendInitMsg(Game& game, sf::UdpSocket& socket)
                 if (isNewClient)
                 {
                     size_t id{ clients.size() };
-                    clientData clientdata{ sender, clientPort, name, Time::now(), true, true};
+                    clientData clientdata{ sender.value(), clientPort, name, Time::now(), true, true};
                     clients.insert({ id, clientdata });
                     game.createPlayer(id, name);
                     std::cout << name << " connected. (" << clients.size() << "/" << numOfPlayers << ")" << std::endl;
 
                     packet.clear();
-                    packet << (sf::Uint8)id;
-                    if (socket.send(packet, sender, clientPort) != sf::Socket::Status::Done)
+                    packet << (uint8_t)id;
+                    if (socket.send(packet, sender.value(), clientPort) != sf::Socket::Status::Done)
                     {
                         std::cout << "ERROR - Couldn't send data" << std::endl;
                     }
@@ -109,7 +108,8 @@ int main()
 
     sf::UdpSocket socket;
     socket.setBlocking(true);
-    serverIp = sf::IpAddress::getLocalAddress(); // sf::IpAddress::LocalHost;
+
+    sf::IpAddress serverIp{ sf::IpAddress::getLocalAddress().value() };
 
     // bind the socket to a port
     if (socket.bind(port, serverIp) != sf::Socket::Status::Done)
@@ -122,7 +122,7 @@ int main()
     else
     {
         //std::cout << "Private IP: " << serverIp.toString() << std::endl;
-        std::cout << "This is the server IP that the clients need to enter:\n" << sf::IpAddress::getPublicAddress() << std::endl;
+        std::cout << "This is the server IP that the clients need to enter:\n" << sf::IpAddress::getPublicAddress().value() << std::endl;
         std::cout << "Enter number of players (E.g. 2):" << std::endl;
         std::cin >> numOfPlayers;
     }
@@ -143,19 +143,19 @@ int main()
     {
         bool sendToClient{ false };
         sf::Packet packet;
-        sf::IpAddress sender;
+        std::optional<sf::IpAddress> sender;
         unsigned short clientPort;
         socket.receive(packet, sender, clientPort);
         serverStartTime = Time::now();
 
-        sf::Uint8 senderId;
+        uint8_t senderId;
         gameInput input;
         if (packet >> senderId >> input)
         {
             GameStruct gameMsg;
             for (auto& [id, clientdata] : clients)
             {
-                if (clientdata.ip == sender && clientdata.port == clientPort && (sf::Uint8)id == senderId)
+                if (clientdata.ip == sender.value() && clientdata.port == clientPort && (uint8_t)id == senderId)
                 {
                     clientdata.lastSentMsgTime = Time::now();
                     clientdata.connected = true;
@@ -170,17 +170,17 @@ int main()
                     if (clientdata.needsAllData)
                     {
                         game.getAllData(gameMsg);
-                        packet << (sf::Int8)PackageType::all << gameMsg;
+                        packet << (int8_t)PackageType::all << gameMsg;
                         std::cout << "Packet size 'all': " << (int)packet.getDataSize() << std::endl;
                         socket.send(packet, clientdata.ip, clientdata.port);
                         clientdata.needsAllData = false;
                     }
                     else
                     {
-                        game.getDeltaData(gameMsg, (sf::Uint8)id);
-                        packet << (sf::Int8)PackageType::delta << gameMsg;
+                        game.getDeltaData(gameMsg, (uint8_t)id);
+                        packet << (int8_t)PackageType::delta << gameMsg;
                         socket.send(packet, clientdata.ip, clientdata.port);
-                        game.clearDeltaData((sf::Uint8)id);
+                        game.clearDeltaData((uint8_t)id);
                     }                      
                     break;
                 }
@@ -207,7 +207,7 @@ int main()
                     sf::Packet packet;
                     GameStruct gameMsg;
                     game.getAllData(gameMsg);
-                    packet << (sf::Int8)PackageType::all << gameMsg;
+                    packet << (int8_t)PackageType::all << gameMsg;
                     socket.send(packet, clientdata.ip, clientdata.port);
                 }
             }

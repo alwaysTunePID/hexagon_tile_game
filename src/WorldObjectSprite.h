@@ -2,6 +2,7 @@
 #define ENTITYSPRITE_H
 
 #include <vector>
+#include <map>
 #include <SFML/Graphics.hpp>
 #include "WorldObject.h"
 #include "Enums.h"
@@ -49,7 +50,6 @@ private:
 
 public:
     WorldObjectSprite(WorldObjectType worldObjectType, int value);
-    WorldObjectSprite();
     ~WorldObjectSprite();
 
     int getTextureIndexDirOffset(directionType dir);

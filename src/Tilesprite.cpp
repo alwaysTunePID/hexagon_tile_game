@@ -7,7 +7,7 @@
 #include "Transformations.h"
 
 Tilesprite::Tilesprite(Tile& tile)
-    : textures{}, highlightTexture{}, frameIdx{ 0 }, tileShape{}, m_tileSurface{}, sprite{}, highlightSprite{}, type{ tile.getTileType() }, m_shader{}
+    : textures{}, highlightTexture{}, frameIdx{ 0 }, tileShape{}, m_tileSurface{}, sprite{ highlightTexture }, highlightSprite{ highlightTexture }, type{ tile.getTileType() }, m_shader{}
 {
     std::string tileStr{ ToString(type) };
     std::string imagePath{ "../../../resources/textures/Tiles/" + tileStr + "/"};
@@ -33,21 +33,21 @@ Tilesprite::Tilesprite(Tile& tile)
         textures.push_back(texture);
     }
 
-    sprite.setTexture(textures[0]);
-    sprite.setOrigin(TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1); // -1 because of tile thickness 
+    sprite.setTexture(textures[0], true);
+    sprite.setOrigin({TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f - 1.f}); // -1 because of tile thickness 
     sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 
     // Highlight tile
     std::string imagePath2{ "../../../resources/textures/HighlightTile/HighlightTile.png" };
     highlightTexture.loadFromFile(imagePath2);
-    highlightSprite.setTexture(highlightTexture);
-    highlightSprite.setOrigin(TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1); // -1 because of tile thickness
+    highlightSprite.setTexture(highlightTexture, true);
+    highlightSprite.setOrigin({TILE_WIDTH / 2.f, TILE_HEIGHT / 2.f - 1.f}); // -1 because of tile thickness
     highlightSprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
 
     // load only the fragment shader
     if (type == tileType::water)
     {
-        if (!m_shader.loadFromFile("../../../shaders/blur.frag", sf::Shader::Fragment))
+        if (!m_shader.loadFromFile("../../../shaders/blur.frag", sf::Shader::Type::Fragment))
         {
             std::cout << "ERROR: Couldn't load blur.frag" << std::endl;
         }
@@ -56,7 +56,7 @@ Tilesprite::Tilesprite(Tile& tile)
 
     if (type == tileType::water)
     {
-        if (!m_tileSurface.create(WIDTH2, HEIGHT2))
+        if (!m_tileSurface.resize({WIDTH2, HEIGHT2}))
             std::cout << "ERROR: Couldn't create tileSurface" << std::endl;
 
         tileShape.setPointCount(8);
@@ -75,7 +75,7 @@ Tilesprite::Tilesprite(Tile& tile)
 }
 
 Tilesprite::Tilesprite()
-    : textures{}, highlightTexture{}, frameIdx{ 0 }, tileShape{}, m_tileSurface{}, sprite{}, highlightSprite{}, type{}, m_shader{}
+    : textures{}, highlightTexture{}, frameIdx{ 0 }, tileShape{}, m_tileSurface{}, sprite{ highlightTexture }, highlightSprite{ highlightTexture }, type{}, m_shader{}
 {}
 
 Tilesprite::~Tilesprite()
@@ -112,7 +112,7 @@ void Tilesprite::setPosFromTileIdx(TileIdx tileIdx, displayInput& camera)
     if (type == tileType::water)
         s_pos.y += 1.0 * camera.zoom;
 
-    sprite.setPosition(s_pos.x, s_pos.y);
+    sprite.setPosition({s_pos.x, s_pos.y});
 
     highlightSprite.setPosition(sprite.getPosition());
 
@@ -136,7 +136,7 @@ void Tilesprite::updateWaterSurfaceTexture(Tile& tile, displayInput& camera)
     //sf::View view(sf::FloatRect(0.f, 0.f, TILE_WIDTH * camera.zoom, TILE_HEIGHT * camera.zoom));
     //m_tileSurface.setView(view);
     // Change these hardcoded to correct values
-    tileShape.setPosition(0.f, 1.f * camera.zoom);
+    tileShape.setPosition({0.f, 1.f * camera.zoom});
     tileShape.setScale(sf::Vector2f(camera.zoom, camera.zoom));
     m_tileSurface.draw(tileShape);
     m_tileSurface.display();
@@ -159,17 +159,23 @@ void Tilesprite::updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInpu
 
         int rectLeft{ static_cast<int>(s_pos.x - TILE_WIDTH * CAMERA_0.zoom / 2.0) };
         int rectTop{ static_cast<int>(s_pos.y - (TILE_HEIGHT / 2.0 - 1) * CAMERA_0.zoom) };
-        reflectionSprite.setTextureRect(sf::IntRect(rectLeft, rectTop, TILE_WIDTH * CAMERA_0.zoom, TILE_HEIGHT * CAMERA_0.zoom));
+        reflectionSprite.setTextureRect(sf::IntRect(
+            {rectLeft, rectTop},
+            {static_cast<int>(round(TILE_WIDTH * CAMERA_0.zoom)),
+             static_cast<int>(round(TILE_HEIGHT * CAMERA_0.zoom))}));
 
         reflectionSurface.clear({0,0,0,0});
         reflectionSurface.draw(reflectionSprite);
         reflectionSurface.display();
 
-        sprite.setOrigin((TILE_WIDTH / 2) * camera.zoom, (TILE_HEIGHT / 2 - 1) * camera.zoom); // -1 because of tile thickness
+        sprite.setOrigin({(TILE_WIDTH / 2) * camera.zoom, (TILE_HEIGHT / 2 - 1) * camera.zoom}); // -1 because of tile thickness
         sprite.setScale(sf::Vector2f(1.f, 1.f));
         setPosFromTileIdx(tile.getTileIdx(), camera);
         sprite.setTexture(textures[1], resetRect);
-        sprite.setTextureRect(sf::IntRect(0, 0, TILE_WIDTH * camera.zoom, TILE_HEIGHT * camera.zoom));
+        sprite.setTextureRect(sf::IntRect(
+            {0, 0},
+            {static_cast<int>(round(TILE_WIDTH * camera.zoom)),
+             static_cast<int>(round(TILE_HEIGHT * camera.zoom))}));
 
         worldPos globalLightVecScreen{ NormalToScreenVec(globalLightVec) };
         sf::Vector3f negScreenLightVec{
@@ -199,7 +205,7 @@ void Tilesprite::updateAndDraw(sf::RenderWindow& window, Tile& tile, displayInpu
     else
     {
         //bool active{ tile.isActive() };
-        sprite.setOrigin(TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1); // -1 because of tile thickness 
+        sprite.setOrigin({TILE_WIDTH / 2, TILE_HEIGHT / 2 - 1}); // -1 because of tile thickness 
         sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
         setPosFromTileIdx(tile.getTileIdx(), camera);
         sprite.setTexture(textures[0], resetRect);

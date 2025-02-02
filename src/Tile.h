@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <map>
 #include <unordered_set>
 #include "Enums.h"
 
@@ -27,11 +28,11 @@ private:
     bool active;
     bool highlighted;
     std::vector<effectData> properties;
-    std::map<sf::Uint8, GameDeltas>* deltas;
+    std::map<uint8_t, GameDeltas>* deltas;
 
 public:
     Tile();
-    Tile(tileType blocktype, int idt, std::map<sf::Uint8, GameDeltas>* deltas);
+    Tile(tileType blocktype, int idt, std::map<uint8_t, GameDeltas>* deltas);
     ~Tile();
 
     TileIdx getTileIdx();

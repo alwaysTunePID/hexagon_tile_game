@@ -11,7 +11,7 @@ WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
       visualType{ VisualType::last }, textures{}, m_normalTexture{},
       m_height{ static_cast<float>(GetSize(worldObjectType, value).h) },
       m_width{ static_cast<float>(GetSize(worldObjectType, value).w) },
-      drawByPixel{ false }, animationLengths{}, sprite{}, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
+      drawByPixel{ false }, animationLengths{}, sprite{ m_normalTexture }, m_shader{}, m_enableShaders{}, animationDataMap{}, pixelSprites{},
       pixelAnimationStep{ -1 }
 {
     animationLengths.push_back(1);
@@ -41,18 +41,14 @@ WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
             completePath = "../../../resources/textures/" + folderAndFile + dirString + "Normal.png";
             m_normalTexture.loadFromFile(completePath);
 
-            if (!m_shader.loadFromFile("../../../shaders/object.frag", sf::Shader::Fragment))
+            if (!m_shader.loadFromFile("../../../shaders/object.frag", sf::Shader::Type::Fragment))
                 std::cout << "ERROR: Couldn't load object.frag" << std::endl;
         }
     }
 
-    sprite.setTexture(textures[0]);
+    sprite.setTexture(textures[0], true);
     sprite.setOrigin(GetTextureOrigin(worldObjectType, sf::Vector2f{m_width, m_height}));
     sprite.setScale(sf::Vector2f(INIT_SCALE, INIT_SCALE));
-}
-
-WorldObjectSprite::WorldObjectSprite()
-{
 }
 
 WorldObjectSprite::~WorldObjectSprite()
@@ -146,7 +142,10 @@ void WorldObjectSprite::setPos(castedSpellData& spellData, displayInput& camera)
     sprite.setPosition(fromPos + traveledDiff );
     // TODO: Should this really be here?
     if (spellData.spellType != SpellType::teleport)
-        sprite.setRotation(atan2(distDiff.y, distDiff.x) * 180 / PI + 90.0);
+    {
+        sf::Angle angle{ sf::radians(atan2(distDiff.y, distDiff.x) + PI / 2.f) };
+        sprite.setRotation(angle);
+    }
 }
 
 sf::Vector2f WorldObjectSprite::getPixelPos(unsigned int x, unsigned int y, displayInput& camera)
@@ -161,29 +160,27 @@ sf::Vector2f WorldObjectSprite::getPixelPos(unsigned int x, unsigned int y, disp
 
 void WorldObjectSprite::setRot(directionType dir)
 {
-    float angle{};
+    sf::Angle angle{ sf::degrees(0.f) };
     switch (dir)
     {
     case directionType::up:
-        angle = 0.0;
         break;
     case directionType::upLeft:
-        angle = 315.0;
+        angle += sf::degrees(315.f);
         break;
     case directionType::downLeft:
-        angle = 225.0;
+        angle += sf::degrees(225.f);
         break;
     case directionType::down:
-        angle = 180.0;
+        angle += sf::degrees(180.f);
         break;
     case directionType::downRight:
-        angle = 135.0;
+        angle += sf::degrees(135.f);
         break;
     case directionType::upRight:
-        angle = 45.0;
+        angle += sf::degrees(45.f);
         break;
     default:
-        angle = 0.0;
         break;
     }
     sprite.setRotation(angle);
@@ -229,13 +226,13 @@ void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& cam
     directionType dir{ worldObject.getDir() };
     bool isDirectional{ GetTextureType(worldObject.getType()) == textureType::directional };
     int textureIndex { isDirectional ? dirToTextureIdx(dir) : 0 };
-    sprite.setTexture(textures[textureIndex]);
+    sprite.setTexture(textures[textureIndex], true);
     displayInput camera { reflected ? CAMERA_0 : camera_in };
     screenPos s_pos{ WorldToScreenPos(worldObject.getPos(), camera) };
-    sprite.setPosition(s_pos.x, s_pos.y);
+    sprite.setPosition({s_pos.x, s_pos.y});
     float reflectionFlip{ reflected ? -1.f : 1.f };
     sprite.setScale(sf::Vector2f(getHFlipFactor(dir) * camera.zoom, reflectionFlip * camera.zoom));
-    float rotation{ reflected ? -16.f : 0.f };
+    sf::Angle rotation{ sf::degrees(reflected ? -16.f : 0.f) };
     sprite.setRotation(rotation);
 
     if (objectType == WorldObjectType::mountain)
@@ -256,13 +253,13 @@ void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& cam
 // TODO: Too much of a copy of the function above
 void WorldObjectSprite::updateSprite(woCosmetic& cosmetic, displayInput& camera_in, worldPos& globalLightVec, bool reflected)
 {
-    sprite.setTexture(textures[cosmetic.value]);
+    sprite.setTexture(textures[cosmetic.value], true);
     displayInput camera { reflected ? CAMERA_0 : camera_in };
     screenPos s_pos{ WorldToScreenPos(cosmetic.pos, camera) };
-    sprite.setPosition(s_pos.x, s_pos.y);
+    sprite.setPosition({s_pos.x, s_pos.y});
     float reflectionFlip{ reflected ? -1.f : 1.f };
     sprite.setScale(sf::Vector2f(camera.zoom, reflectionFlip * camera.zoom));
-    float rotation{ reflected ? -16.f : 0.f };
+    sf::Angle rotation{ sf::degrees(reflected ? -16.f : 0.f) };
     sprite.setRotation(rotation);
 
     if (objectType == WorldObjectType::mountain)
@@ -282,11 +279,11 @@ void WorldObjectSprite::updateSprite(woCosmetic& cosmetic, displayInput& camera_
 
 void WorldObjectSprite::updateSprite(worldPos w_pos, displayInput& camera)
 {
-    sprite.setTexture(textures[0]);
-    sprite.setOrigin(m_width / 2, m_height / 2);
+    sprite.setTexture(textures[0], true);
+    sprite.setOrigin({m_width / 2.f, m_height / 2.f});
 
     screenPos s_pos{ WorldToScreenPos(w_pos, camera) };
-    sprite.setPosition(s_pos.x, s_pos.y);
+    sprite.setPosition({s_pos.x, s_pos.y});
     sprite.setScale(sf::Vector2f(camera.zoom, camera.zoom));
 }
 
@@ -366,12 +363,12 @@ void WorldObjectSprite::updateTeleportAnimation(castedSpellData& spellData, disp
 {
     if (pixelSprites.empty())
     {
-        sf::Image image = sprite.getTexture()->copyToImage();
+        sf::Image image = sprite.getTexture().copyToImage();
         for (unsigned int y = 0; y < m_height; y++)
         {
             for (unsigned int x = 0; x < m_width; x++)
             {
-                sf::Color color = image.getPixel(x,y);
+                sf::Color color = image.getPixel({x, y});
                 // Skip transparent pixels
                 if (color.a == 0)
                     continue;
@@ -457,7 +454,7 @@ void WorldObjectSprite::updateTeleportAnimation(castedSpellData& spellData, disp
             float new_x{ origin.x + relPos.x };
             float new_y{ origin.y + relPos.y };
 
-            pixel.pixelShape.setPosition(new_x, new_y);
+            pixel.pixelShape.setPosition({new_x, new_y});
             pixel.pixelShape.setScale(sf::Vector2f(camera.zoom, camera.zoom));
         }
         // State switch condition

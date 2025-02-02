@@ -9,16 +9,14 @@
 
 Graphics::Graphics(unsigned seed)
     : clock{}, worldObjectSprites{}, tilesprites{}, tileCosmetics{}, grass{ WorldObjectType::grass, 0},
-      font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{}, m_tileSurface{}, m_initTime{ Time::now() },
+      font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{ {WIDTH2, HEIGHT2} },
+      m_tileSurface{ {(uint16_t)TILE_WIDTH, (uint16_t)TILE_HEIGHT} }, m_initTime{ Time::now() },
       m_timePastForShader{}, m_globalLightVec{}, generator{ std::default_random_engine{seed} }
 {
-    if (!m_reflectionSurface.create(WIDTH2, HEIGHT2))
-        std::cout << "ERROR: Couldn't create reflectionSurface" << std::endl;
-    if (!m_tileSurface.create(TILE_WIDTH, TILE_HEIGHT))
-        std::cout << "ERROR: Couldn't create tileSurface" << std::endl;
     //m_reflectionSurface.setSmooth(true); // Should it be smoothed?
 
-    font.loadFromFile("../../../resources/fonts/PixCon.ttf");
+    if (!font.openFromFile("../../../resources/fonts/PixCon.ttf"))
+        std::cout << "ERROR: Couldn't open font PixCon.ttf" << std::endl;
 
     if (!sf::Shader::isAvailable())
     {
@@ -34,7 +32,7 @@ Graphics::~Graphics()
         delete worldObjectSprite_p;
 }
 
-void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, sf::Uint8 callerId, double dt)
+void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input, uint8_t callerId, double dt)
 {
     window.clear();
     m_reflectionSurface.clear({245, 222, 179, 255}); // sand color
@@ -283,13 +281,11 @@ void Graphics::drawCoordinateSystem(sf::RenderWindow& window)
     }
 }
 
-void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 callerId)
+void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, uint8_t callerId)
 {
     for (auto& [id, player] : game.getPlayers())
     {
-        // Need a box / canvas to draw text to ??
-        std::string hi{ "Hello" };
-        sf::Text texttt{ hi, font };
+        sf::Text texttt( font );
         texttt.setCharacterSize(24);
         float turnTimer{ player.getTurnTime() };
         std::string turnTimerStr{ std::to_string(static_cast<int>(turnTimer)) };
@@ -318,7 +314,7 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, sf::Uint8 cal
         // set the color
         sf::Color gray{ 255, 255, 255, 100 };
         sf::Color textColor{ player.isCurrentPlayer() ? sf::Color::White : gray };
-        texttt.setColor(textColor);
+        texttt.setFillColor(textColor);
 
         window.draw(texttt);
 
@@ -403,8 +399,7 @@ void Graphics::drawInventory(Player& player, sf::RenderWindow& window)
 {
     if (player.isLJoyMode(LJoyMode::aim))
     {
-        std::string hi{ "Hello" };
-        sf::Text texttt{ hi, font };
+        sf::Text texttt( font );
         texttt.setCharacterSize(24);
         sf::Color gray{ 255, 255, 255, 100 };
         std::string completeStr{};
@@ -418,7 +413,7 @@ void Graphics::drawInventory(Player& player, sf::RenderWindow& window)
             texttt.setString(completeStr);
             texttt.setPosition(sf::Vector2f(xText, yText));
             sf::Color textColor{ (player.getSelectedSpellIdx() == idx) ? sf::Color::White : gray };
-            texttt.setColor(textColor);
+            texttt.setFillColor(textColor);
             window.draw(texttt);
             yText += 30;
             idx++;

@@ -7,7 +7,7 @@ Tile::Tile()
     : id{}, tileIdx{}, dir{}, type{}, effect{}, active{}, highlighted{}, properties{}, deltas{}
 {}
 
-Tile::Tile(tileType tileType, int idt, std::map<sf::Uint8, GameDeltas>* deltas)
+Tile::Tile(tileType tileType, int idt, std::map<uint8_t, GameDeltas>* deltas)
     : id{ idt }, tileIdx{ 0, 0 }, dir{}, type{ tileType }, effect{}, active{ false }, highlighted{ false }, properties{}, deltas{ deltas }
 {
     switch (GetTextureType(type))

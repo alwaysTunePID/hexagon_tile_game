@@ -29,7 +29,7 @@ void Game::createPlayer(uint16_t id, std::string name)
     uint16_t newAimId{ getNewObjectId() };
     TileIdx tileIdx{ board.getInitTileIdxFromPlayerId(id) };
     //tilesWithDelta{}, wosWithDelta{}, wosToDelete{}
-    deltas.insert({ (sf::Uint8)id, GameDeltas{{},{},{}} });
+    deltas.insert({ (uint8_t)id, GameDeltas{{},{},{}} });
 
     WorldObject worldObject{ newCharacterId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &deltas };
     WorldObject aimWorldObject{ newAimId,    WorldObjectType::visual, TileIdxToWorldPos(tileIdx), &deltas };
@@ -720,14 +720,14 @@ void Game::setAllData(GameStruct& m)
     board.setAllData(m.board);
 }
 
-void Game::clearDeltaData(sf::Uint8 playerId)
+void Game::clearDeltaData(uint8_t playerId)
 {
     deltas.at(playerId).tilesWithDelta.clear();
     deltas.at(playerId).wosWithDelta.clear();
     deltas.at(playerId).wosToDelete.clear();
 }
 
-void Game::getDeltaData(GameStruct& m, sf::Uint8 playerId) const
+void Game::getDeltaData(GameStruct& m, uint8_t playerId) const
 {
     // TODO: Continue to make delta of everything
     for (auto id : deltas.at(playerId).tilesWithDelta)

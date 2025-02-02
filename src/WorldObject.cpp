@@ -4,7 +4,7 @@
 #include "Transformations.h"
 
 // Todo  38.f was derived through testing just. Magick number
-WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<sf::Uint8, GameDeltas>* deltas)
+WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std::map<uint8_t, GameDeltas>* deltas)
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
       width{ GetHitbox(type).x / 42.f },
       height{ GetHitbox(type).y / 42.f },

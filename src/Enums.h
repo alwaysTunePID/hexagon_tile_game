@@ -26,8 +26,8 @@ const int HEIGHT2{ 1080 };
 const double SQ_WIDTH{ 48 };
 const double SQ_HEIGHT{ 36 };
 
-const double TILE_WIDTH{ 48 };
-const double TILE_HEIGHT{ 27 };
+const float TILE_WIDTH{ 48 };
+const float TILE_HEIGHT{ 27 };
 
 const double EFFECT_WIDTH{ 48 };
 const double EFFECT_HEIGHT{ 48 };

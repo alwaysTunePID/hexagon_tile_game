@@ -38,7 +38,7 @@ private:
     std::map<int, Player> players;
     std::map<int, WorldObject> worldObjects;
     std::map<int, Fire> effects;
-    std::map<sf::Uint8, GameDeltas> deltas;
+    std::map<uint8_t, GameDeltas> deltas;
     stateType state;
     int boardSize;
     Board board;
@@ -99,8 +99,8 @@ public:
     // Network
     void getAllData(GameStruct& m) const;
     void setAllData(GameStruct& m);
-    void clearDeltaData(sf::Uint8 playerId);
-    void getDeltaData(GameStruct& m, sf::Uint8 playerId) const;
+    void clearDeltaData(uint8_t playerId);
+    void getDeltaData(GameStruct& m, uint8_t playerId) const;
     void setDeltaData(GameStruct& m);
 };
 

@@ -17,14 +17,13 @@ bool enableShaders{ false };
 int  tileSpacingIgnoreCounter{ 0 };
 
 std::string name;
-sf::Uint8 playerId{ 0 };
+uint8_t playerId{ 0 };
 double joyThreshHigh{ 0.0 };
 double joyThreshLow{ 0.0 };
 unsigned seed { 2952795 };
 std::string configPath{ "../../../config.txt" };
 ConfigParser configParser{ configPath };
 
-sf::IpAddress  serverIp;
 unsigned short serverPort{ 55001 };
 bool sendingActivated{ true };
 
@@ -41,153 +40,156 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
     bool xboxConnected = sf::Joystick::isConnected(0);
     bool hasFocus = window.hasFocus();
 
-    auto isKeyDown = [&hasFocus](sf::Keyboard::Key key) -> auto {
+    const auto onClose = [&window](const sf::Event::Closed&)
+    {
+        window.close();
+    };
+
+    const auto onKeyPressed = [&window, &hasFocus](const sf::Event::KeyPressed& keyPressed)
+    {
+        if (hasFocus) {
+            if (keyPressed.scancode == sf::Keyboard::Scancode::Escape)
+                window.close();
+        }
+    };
+
+    const auto onKeyReleased = [&window, &hasFocus, &input](const sf::Event::KeyReleased& keyReleased)
+    {
+        if (hasFocus) {
+            if (keyReleased.scancode == sf::Keyboard::Scancode::N)
+                input.action = actionType::skipTurn;
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::C)
+            {
+                if (showCoordinateSystem) {
+                    showCoordinateSystem = false;
+                    std::cout << "Hide Coordinate System" << std::endl;
+                } else {
+                    std::cout << "Show Coordinate System" << std::endl;
+                    showCoordinateSystem = true;
+                }
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::V)
+            {
+                if (enableShaders) {
+                    std::cout << "Disable Shaders" << std::endl;
+                    enableShaders = false;
+                } else {
+                    std::cout << "Enable Shaders" << std::endl;
+                    enableShaders = true;
+                }
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::L)
+            {
+                configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
+                std::cout << joyThreshHigh << " " << joyThreshLow << std::endl;
+            }
+        }
+    };
+
+    const auto onJoystickButtonReleased = [&window, &hasFocus, &input](const sf::Event::JoystickButtonReleased& joystickButtonReleased)
+    {
+        if (hasFocus) {
+            if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::A))
+            {
+                input.button = xbox::A;
+                std::cout << "A" << std::endl;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::B))
+            {
+                input.button = xbox::B;
+                std::cout << "B" << std::endl;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::X))
+            {
+                input.button = xbox::X;
+                std::cout << "X" << std::endl;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::Y))
+            {
+                input.button = xbox::Y;
+                std::cout << "Y" << std::endl;
+                enableDebugPrint = enableDebugPrint ? false : true;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::LB))
+            {
+                input.button = xbox::LB;
+                std::cout << "LB" << std::endl;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::RB))
+            {
+                input.button = xbox::RB;
+                std::cout << "RB" << std::endl;
+            }
+            else if (joystickButtonReleased.button == static_cast<unsigned int>(xbox::RJoy))
+            {
+                std::cout << "RJoy" << std::endl;
+            }
+        }
+    };
+
+    window.handleEvents(onClose, onKeyPressed, onKeyReleased, onJoystickButtonReleased);
+
+    // Now, handle "while hold down" keys
+    auto isKeyDown = [&hasFocus](sf::Keyboard::Scancode key) -> auto {
         // isKeyPressed also works if window is unfocused. Ensure window is focused.
         return hasFocus && sf::Keyboard::isKeyPressed(key);
     };
 
-    for (auto event = sf::Event{}; window.pollEvent(event);)
+    if (isKeyDown(sf::Keyboard::Scancode::P))
     {
-        if (event.type == sf::Event::Closed)
-        {
-            window.close();
-        }
-
-        if (isKeyDown(sf::Keyboard::BackSpace))
-        {
-            input.action = actionType::undoMove;
-        }
-        else if (isKeyDown(sf::Keyboard::N))
-        {
-            input.action = actionType::skipTurn;
-        }
-        else if (isKeyDown(sf::Keyboard::P))
-        {
-            std::cout << "Pressed P " << std::endl;
-        }
-        else if (isKeyDown(sf::Keyboard::LShift) && isKeyDown(sf::Keyboard::Z))
-        {
-            posZ = -160.f;
-        }
-        else if (!isKeyDown(sf::Keyboard::LShift) && isKeyDown(sf::Keyboard::Z))
-        {
-            posZ = 160.f;
-        }
-        else if ((event.type == sf::Event::KeyReleased) && (event.key.code == sf::Keyboard::C))
-        {
-            if (showCoordinateSystem)
-            {
-                showCoordinateSystem = false;
-                std::cout << "Hide Coordinate System" << std::endl;
-            }
-            else
-            {
-                std::cout << "Show Coordinate System" << std::endl;
-                showCoordinateSystem = true;
-            }
-        }
-        else if ((event.type == sf::Event::KeyReleased) && (event.key.code == sf::Keyboard::V))
-        {
-            if (enableShaders)
-            {
-                std::cout << "Disable Shaders" << std::endl;
-                enableShaders = false;
-            }
-            else
-            {
-                std::cout << "Enable Shaders" << std::endl;
-                enableShaders = true;
-            }
-        }
-        else if (isKeyDown(sf::Keyboard::L))
-        {
-            configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
-            std::cout << joyThreshHigh << " " << joyThreshLow << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::A)))
-        {
-            input.button = xbox::A;
-            std::cout << "A" << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::B)))
-        {
-            input.button = xbox::B;
-            std::cout << "B" << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::X)))
-        {
-            input.button = xbox::X;
-            std::cout << "X" << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::Y)))
-        {
-            input.button = xbox::Y;
-            std::cout << "Y" << std::endl;
-            enableDebugPrint = enableDebugPrint ? false : true;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::LB)))
-        {
-            input.button = xbox::LB;
-            std::cout << "LB" << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::RB)))
-        {
-            input.button = xbox::RB;
-            std::cout << "RB" << std::endl;
-        }
-        else if (sf::Joystick::isButtonPressed(0, static_cast<unsigned int>(xbox::RJoy)))
-        {
-            if (tileSpacingIgnoreCounter <= 0)
-            {
-                dispInput.tileSpacing = true;
-                tileSpacingIgnoreCounter = 20;
-                std::cout << "RJoy" << std::endl;
-            }
-        }
+        std::cout << "Pressed P " << std::endl;
     }
-
-    if (isKeyDown(sf::Keyboard::W))
+    if (isKeyDown(sf::Keyboard::Scancode::LShift) && isKeyDown(sf::Keyboard::Scancode::Z))
+    {
+        posZ = -160.f;
+    }
+    if (!isKeyDown(sf::Keyboard::Scancode::LShift) && isKeyDown(sf::Keyboard::Scancode::Z))
+    {
+        posZ = 160.f;
+    }
+    // Move player
+    if (isKeyDown(sf::Keyboard::Scancode::W))
     {
         posY = -100.f;
     }
-    if (isKeyDown(sf::Keyboard::A))
+    if (isKeyDown(sf::Keyboard::Scancode::A))
     {
         posX = -100.f;
     }
-    if (isKeyDown(sf::Keyboard::S))
+    if (isKeyDown(sf::Keyboard::Scancode::S))
     {
         posY = 100.f;
     }
-    if (isKeyDown(sf::Keyboard::D))
+    if (isKeyDown(sf::Keyboard::Scancode::D))
     {
         posX = 100.f;
     }
-
-    if (isKeyDown(sf::Keyboard::Up))
+    // Move camera
+    if (isKeyDown(sf::Keyboard::Scancode::Up))
     {
         posV = -100.f;
     }
-    if (isKeyDown(sf::Keyboard::Left))
+    if (isKeyDown(sf::Keyboard::Scancode::Left))
     {
         posU = -100.f;
     }
-    if (isKeyDown(sf::Keyboard::Down))
+    if (isKeyDown(sf::Keyboard::Scancode::Down))
     {
         posV = 100.f;
     }
-    if (isKeyDown(sf::Keyboard::Right))
+    if (isKeyDown(sf::Keyboard::Scancode::Right))
     {
         posU = 100.f;
     }
 
     if (xboxConnected)
     {
-        posX = sf::Joystick::getAxisPosition(0, sf::Joystick::X);
-        posY = sf::Joystick::getAxisPosition(0, sf::Joystick::Y);
-        posZ = sf::Joystick::getAxisPosition(0, sf::Joystick::Z); // <- Zoom 
-        posR = sf::Joystick::getAxisPosition(0, sf::Joystick::R);
-        posU = sf::Joystick::getAxisPosition(0, sf::Joystick::U);
-        posV = sf::Joystick::getAxisPosition(0, sf::Joystick::V);
+        posX = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X);
+        posY = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y);
+        posZ = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Z); // <- Zoom 
+        posR = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::R);
+        posU = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::U);
+        posV = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::V);
     }
 
     if (enableDebugPrint) // && (std::abs(posX) > 0.1 || std::abs(posY) > 0.1)
@@ -226,7 +228,7 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
         tileSpacingIgnoreCounter -= 1;
 }
 
-void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
+void sendInitMsgToServerAndWaitForResp(sf::IpAddress& serverIp, sf::UdpSocket& socket)
 {
     bool serverAnswered{ false };
     while (!serverAnswered)
@@ -254,9 +256,9 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
             std::cout << "ERROR - Couldn't send data" << std::endl;
         }
 
-        //sf::Uint8 r_data[100];
+        //uint8_t r_data[100];
         //std::size_t received;
-        sf::IpAddress sender;
+        std::optional<sf::IpAddress> sender;
         unsigned short senderPort;
         //sf::Socket::Status status = socket.receive(r_data, 100, received, sender, senderPort);
         sf::Socket::Status status = socket.receive(packet, sender, senderPort);
@@ -266,7 +268,7 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
         }
         else if (status == sf::Socket::Status::Done)
         {
-            if (sender != serverIp)
+            if (sender.value() != serverIp)
                 continue;
 
             serverAnswered = true;
@@ -280,7 +282,7 @@ void sendInitMsgToServerAndWaitForResp(sf::UdpSocket& socket)
     }
 }
 
-void waitForAllPlayersToConnect(sf::UdpSocket& socket)
+void waitForAllPlayersToConnect(sf::IpAddress& serverIp, sf::UdpSocket& socket)
 {
     bool waitForAllToConnect{ true };
     while (waitForAllToConnect)
@@ -292,7 +294,7 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
             std::cout << "ERROR - Couldn't send data" << std::endl;
         }
 
-        sf::IpAddress sender;
+        std::optional<sf::IpAddress> sender;
         unsigned short senderPort;
         sf::Socket::Status status = socket.receive(packet, sender, senderPort);
         if (status != sf::Socket::Status::Done && status != sf::Socket::Status::NotReady)
@@ -301,7 +303,7 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
         }
         else if (status == sf::Socket::Status::Done)
         {
-            if (sender != serverIp)
+            if (sender.value() != serverIp)
                 continue;
 
             std::string gameStatus;
@@ -321,7 +323,6 @@ void waitForAllPlayersToConnect(sf::UdpSocket& socket)
 ///////////////// Main /////////////////////////////////
 int main()
 {
-    serverIp = sf::IpAddress::getPublicAddress(); // sf::IpAddress::LocalHost
     unsigned short port{ 55002 };
     sf::UdpSocket  socket;
     socket.setBlocking(true);
@@ -336,17 +337,30 @@ int main()
         port++;
     }
 
-    if (!DEBUG_LAUNCH)
-    {
+    sf::IpAddress serverIp{ sf::IpAddress::getPublicAddress().value() };
+    std::string serverIpStr{};
+    if (!DEBUG_LAUNCH) {
         std::cout << "Enter server IP address:" << std::endl;
-        std::cin >> serverIp;
+        std::cin >> serverIpStr;
+        auto serverIp_p{ sf::IpAddress::resolve(serverIpStr) };
+        if (serverIp_p) {
+            serverIp = serverIp_p.value();
+        } else {
+            std::cout << "ERROR: Invalid server IP!" << std::endl;
+        }
+    } else {
+        std::cout << "Debug Launch" << std::endl;
     }
-    
-    sendInitMsgToServerAndWaitForResp(socket);
-    waitForAllPlayersToConnect(socket);
 
-    auto window = sf::RenderWindow { {WIDTH2, HEIGHT2}, "Some Game" };
-    window.setFramerateLimit(144);
+    sendInitMsgToServerAndWaitForResp(serverIp, socket);
+    waitForAllPlayersToConnect(serverIp, socket);
+
+    sf::ContextSettings settings{ sf::ContextSettings() };
+    settings.majorVersion = 4;
+    settings.minorVersion = 6;
+
+    sf::RenderWindow window( sf::VideoMode({WIDTH2, HEIGHT2}), "Wizards of Hexagon", sf::Style::Default, sf::State::Windowed, settings );
+    window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
 
     configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
@@ -375,7 +389,9 @@ int main()
         {
             // Send input to server
             packet << playerId << input;
-            socket.send(packet, serverIp, serverPort);
+            if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done) {
+                std::cout << "ERROR: Couldn't send package to server" << std::endl;
+            }
         }
 
         // Measure client active time
@@ -384,16 +400,18 @@ int main()
         //std::cout << "Active time: " << clientTimePast.count() << std::endl;
 
         // Wait for answer
-        sf::IpAddress sender;
+        std::optional<sf::IpAddress> sender;
         unsigned short senderPort;
-        socket.receive(packet, sender, senderPort);
+        if (socket.receive(packet, sender, senderPort) != sf::Socket::Status::Done) {
+            std::cout << "ERROR: Couldn't receive package to server" << std::endl;
+        }
         clientStartTime = Time::now();
 
         //std::cout << "Package size: " << packet.getDataSize() << std::endl;
 
-        if (sender == serverIp)
+        if (sender.value() == serverIp)
         {
-            sf::Int8 packageTypeInt;
+            int8_t packageTypeInt;
             packet = packet >> packageTypeInt;
             PackageType packageType = (PackageType)packageTypeInt;
 
@@ -427,11 +445,6 @@ int main()
             timeDuration timePast{ endTime - startTime };
             double dt{ timePast.count() };
             startTime = endTime;
-
-            // Activate the window for OpenGL rendering
-            window.setActive();
-
-            // OpenGL drawing commands go here...
 
             //moveInput noMove{};
             //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
