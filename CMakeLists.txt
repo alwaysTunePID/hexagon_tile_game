@@ -28,14 +28,33 @@ FetchContent_MakeAvailable(SFML)
 #)
 #target_compile_features(WizardClient PRIVATE cxx_std_17)
 
+link_directories(${CMAKE_SOURCE_DIR}/libraries/lib)
 add_executable(WizardClient src/HexagonClient.cpp src/PacketFunctions.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/WorldObjectSprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
-#target_include_directories(WizardClient PRIVATE ${CMAKE_SOURCE_DIR}/libraries/include)
+target_include_directories(WizardClient PRIVATE ${CMAKE_SOURCE_DIR}/libraries/include)
 target_compile_features(WizardClient PRIVATE cxx_std_17)
 target_link_libraries(WizardClient PRIVATE
     SFML::Graphics
     SFML::Network
+    glew32
 )
- 
+
+add_custom_command(TARGET WizardClient POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/libraries/bin/glew32.dll  # Adjust this path to where your DLL is located
+        $<TARGET_FILE_DIR:WizardClient>  # This copies it to the same directory as the executable
+)
+
+#set(SFML_BIN_DIR "C:/SFML/bin")  # Adjust to your SFML installation path
+
+## Find all SFML DLLs
+#file(GLOB SFML_DLLS "${SFML_BIN_DIR}/*.dll")
+
+## Copy each DLL to the output folder after building
+#foreach(DLL ${SFML_DLLS})
+#    add_custom_command(TARGET MyApp POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DLL} $<TARGET_FILE_DIR:MyApp>
+#    )
+#endforeach()
 
 add_executable(WizardServer src/HexagonServer.cpp src/PacketFunctions.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Game.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
 target_compile_features(WizardServer PRIVATE cxx_std_17)
