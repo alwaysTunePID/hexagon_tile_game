@@ -26,6 +26,7 @@ private:
     float m_timePastForShader;
     worldPos m_globalLightVec;
     std::default_random_engine generator;
+    bool particleSimOngoing;
 
 public:
     Graphics(unsigned seed);
@@ -46,6 +47,8 @@ public:
     std::vector<woCosmetic>* getTileCosmetics(Tile& tile);
     void updateGlobalLightVec(double timePast);
     void updateGlobalLightVec2(double timePast);
+    void createParticleSimulation();
+    void updateAndDrawParticleSimulation(sf::RenderWindow& window, displayInput& input);
 };
 
 #endif

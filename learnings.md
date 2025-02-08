@@ -45,6 +45,11 @@ https://learnwebgl.brown37.net/12_shader_language/glsl_builtin_functions.html
 ## Graphics
  If you need a depth buffer for 3D rendering, don't forget to request it when calling RenderTexture::create
 
+## Particle Simulation
+The current idea is to learn how to use a Compute Shader to simulate a lot of particles.
+This is one of the youtube videos you have seen on the matter. Slime:
+https://github.com/SebLague/Slime-Simulation/blob/main/Assets/Scripts/Slime/Simulation.cs
+
 ## Measurements
 Sending whole game:
 21244 bytes

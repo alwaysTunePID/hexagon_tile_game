@@ -4,6 +4,7 @@
 #include <SFML/Network/UdpSocket.hpp>
 #include <SFML/Network/Packet.hpp>
 #include <math.h>
+#include <GL/glew.h>
 #include "Enums.h"
 #include "ConfigParser.h"
 #include "Game.h"

@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <GL/glew.h>
 #include "Graphics.h"
 #include "WorldObjectSprite.h"
 #include "Transformations.h"
@@ -11,7 +12,7 @@ Graphics::Graphics(unsigned seed)
     : clock{}, worldObjectSprites{}, tilesprites{}, tileCosmetics{}, grass{ WorldObjectType::grass, 0},
       font{}, camera{ INIT_SCALE, WIDTH2 / 2, HEIGHT2 / 2 }, m_reflectionSurface{ {WIDTH2, HEIGHT2} },
       m_tileSurface{ {(uint16_t)TILE_WIDTH, (uint16_t)TILE_HEIGHT} }, m_initTime{ Time::now() },
-      m_timePastForShader{}, m_globalLightVec{}, generator{ std::default_random_engine{seed} }
+      m_timePastForShader{}, m_globalLightVec{}, generator{ std::default_random_engine{seed} }, particleSimOngoing{ false }
 {
     //m_reflectionSurface.setSmooth(true); // Should it be smoothed?
 
@@ -92,6 +93,8 @@ void Graphics::update(Game& game, sf::RenderWindow& window, displayInput& input,
             //worldObjectSprite_p->draw(window);
         }
     }
+
+    updateAndDrawParticleSimulation(window, input);
 
     //window.draw(sf::Sprite(m_reflectionSurface.getTexture()));
 
@@ -514,4 +517,41 @@ void Graphics::updateGlobalLightVec2(double timePast)
     v.z = -v.z / vLength;
 
     m_globalLightVec = v;
+}
+
+void Graphics::createParticleSimulation()
+{
+    //GLuint ssbo;
+    //glGenBuffers(1, &ssbo);
+    //glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    //glBufferData(GL_SHADER_STORAGE_BUFFER, particleCount * sizeof(Particle), nullptr, GL_DYNAMIC_DRAW);
+    //glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+}   
+
+void Graphics::updateAndDrawParticleSimulation(sf::RenderWindow& window, displayInput& input)
+{
+
+    // TODO: You lost which code you were taking inspiration from when writing this...
+
+    //window.setActive(true);
+    //window.popGLStates();
+//
+    //if (input.enableShaders && !particleSimOngoing)
+    //{
+    //    createParticleSimulation();
+    //    particleSimOngoing = true;
+    //}
+//
+    //glUseProgram(computeShader);
+    //glUniform1f(glGetUniformLocation(computeShader, "deltaTime"), deltaTime);
+    //glUniform3f(glGetUniformLocation(computeShader, "gravity"), 0.0f, -9.81f, 0.0f);
+    //glDispatchCompute(particleCount / 256, 1, 1);  // Launch compute shader
+    //glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // Ensure SSBO updates before rendering
+//
+    //glUseProgram(renderShader);
+    //glBindVertexArray(particleVAO);
+    //glDrawArrays(GL_POINTS, 0, particleCount);
+//
+    //window.pushGLStates();
+    //window.setActive(false);
 }
