@@ -117,6 +117,7 @@ void Player::setVelocity(moveInput& move)
 
 void Player::setAimVelocity(moveInput& move)
 {
+    move.power *= 4.f;
     (*worldObjects)[aimId].setVelocity(move);
 }
 
@@ -127,6 +128,7 @@ bool Player::isCurrentPlayer()
 
 void Player::setCurrentPlayer(bool isCurrent)
 {
+    (*worldObjects)[characterId].setCanLeaveTile(isCurrent);
     currentPlayer = isCurrent;
     clock.restart();
 }

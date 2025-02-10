@@ -226,6 +226,8 @@ sf::Packet& operator >>(sf::Packet& packet, PlayerStruct& m)
     m.selectedSpellIdx       = (int)selectedSpellIdx;
     m.selectedSpellDirection = (directionType)selectedSpellDirection;
 
+    // TODO: Why is this needed?
+    m.selectionSpells = {};
     packet = packet >> numOfSpells;
     for (uint8_t i{ 0 }; i < numOfSpells; i++)
     {

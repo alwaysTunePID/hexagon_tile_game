@@ -36,7 +36,7 @@ WorldObjectSprite::WorldObjectSprite(WorldObjectType worldObjectType, int value)
         texture.loadFromFile(completePath);
         textures.push_back(texture);
 
-        if (worldObjectType == WorldObjectType::mountain)
+        if (worldObjectType == WorldObjectType::mountain || worldObjectType == WorldObjectType::volcano)
         {
             completePath = "../../../resources/textures/" + folderAndFile + dirString + "Normal.png";
             m_normalTexture.loadFromFile(completePath);
@@ -235,7 +235,7 @@ void WorldObjectSprite::updateSprite(WorldObject& worldObject, displayInput& cam
     sf::Angle rotation{ sf::degrees(reflected ? -16.f : 0.f) };
     sprite.setRotation(rotation);
 
-    if (objectType == WorldObjectType::mountain)
+    if (objectType == WorldObjectType::mountain || objectType == WorldObjectType::volcano)
     {
         sf::Vector3f negScreenLightVec{
             -static_cast<float>(globalLightVec.x),
@@ -262,7 +262,7 @@ void WorldObjectSprite::updateSprite(woCosmetic& cosmetic, displayInput& camera_
     sf::Angle rotation{ sf::degrees(reflected ? -16.f : 0.f) };
     sprite.setRotation(rotation);
 
-    if (objectType == WorldObjectType::mountain)
+    if (objectType == WorldObjectType::mountain || objectType == WorldObjectType::volcano)
     {
         sf::Vector3f negScreenLightVec{
             -static_cast<float>(globalLightVec.x),

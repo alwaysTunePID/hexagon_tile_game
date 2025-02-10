@@ -61,6 +61,7 @@ public:
     WorldObject& getWorldObject(int id);
     void setWorldObjectData(WorldObjectStruct& worldobject);
     Player& getPlayer(int id);
+    int getCurrentPlayerId();
     void addTile(Tile tile, TileIdx tileIdx);
     void removeAllTiles();
     void addWorldObject(WorldObject& worldObject);

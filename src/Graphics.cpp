@@ -316,7 +316,7 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, uint8_t calle
         texttt.setPosition(sf::Vector2f(xText, yText));
         // set the color
         sf::Color gray{ 255, 255, 255, 100 };
-        sf::Color textColor{ player.isCurrentPlayer() ? sf::Color::White : gray };
+        sf::Color textColor{ game.getCurrentPlayerId() == id ? sf::Color::White : gray };
         texttt.setFillColor(textColor);
 
         window.draw(texttt);
@@ -340,7 +340,7 @@ void Graphics::drawPlayerGUI(Game& game, sf::RenderWindow& window, uint8_t calle
 
 
             // Draw aim arrow
-            if (player.isLJoyMode(LJoyMode::aim))
+            if (player.isLJoyMode(LJoyMode::aim) && (int)callerId == game.getCurrentPlayerId())
             {
                 WorldObject& worldObject{ game.getWorldObject(player.getAimId()) };
                 bool reflected{ false };

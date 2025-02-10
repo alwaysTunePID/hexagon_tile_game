@@ -34,6 +34,7 @@ private:
     sf::Vector2f origin;
     bool moving;
     bool takeInput;
+    bool tileLeavable;
     bool fallable;
     bool collideable;
     std::vector<Fire> effects;
@@ -54,6 +55,8 @@ public:
     float getHeight();
     TileIdx getTileIdx();
     worldPos getUpdatedPos(double dt);
+    void setCanLeaveTile(bool canLeave);
+    bool canLeaveTile();
     bool isMoving();
     bool isIntersecting(WorldObject& worldObject);
     void canTakeInput(bool can);

@@ -8,14 +8,14 @@ WorldObject::WorldObject(uint16_t id, WorldObjectType type,  worldPos w_pos, std
     : id{ id }, type{ type }, pos{ w_pos }, vel{ 0, 0, 0 }, acc{ 0, 0, 0 }, tileIdx{ WorldPosToTileIdx(w_pos) }, dir{ GetInitDir(type) },
       width{ GetHitbox(type).x / 42.f },
       height{ GetHitbox(type).y / 42.f },
-      origin{}, moving{ false }, takeInput{true}, fallable{ GetCanFall(type) }, collideable{ GetCollideable(type) }, effects{}, deltas{ deltas }
+      origin{}, moving{ false }, takeInput{true}, tileLeavable{true}, fallable{ GetCanFall(type) }, collideable{ GetCollideable(type) }, effects{}, deltas{ deltas }
 {
     for (auto& [playerId, delta] : *deltas)
         delta.wosWithDelta.insert(id);
 }
 
 WorldObject::WorldObject()
-    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, fallable{}, collideable{}, effects{}, deltas{}
+    : id{}, type{}, pos{}, vel{}, acc{}, tileIdx{}, dir{}, width{}, height{}, origin{}, moving{}, takeInput{}, tileLeavable{}, fallable{}, collideable{}, effects{}, deltas{}
 {}
 
 WorldObject::~WorldObject()
@@ -85,6 +85,16 @@ worldPos WorldObject::getUpdatedPos(double dt)
 bool WorldObject::isMoving()
 {
     return moving;
+}
+
+void WorldObject::setCanLeaveTile(bool canLeave)
+{
+    tileLeavable = canLeave;
+}
+
+bool WorldObject::canLeaveTile()
+{
+    return tileLeavable;
 }
 
 bool WorldObject::isIntersecting(WorldObject& worldObject)

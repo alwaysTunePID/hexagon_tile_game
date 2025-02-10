@@ -33,6 +33,7 @@ void Game::createPlayer(uint16_t id, std::string name)
 
     WorldObject worldObject{ newCharacterId, WorldObjectType::player, TileIdxToWorldPos(tileIdx), &deltas };
     WorldObject aimWorldObject{ newAimId,    WorldObjectType::visual, TileIdxToWorldPos(tileIdx), &deltas };
+    worldObject.setCanLeaveTile(false);
     addWorldObject(worldObject);
     addWorldObject(aimWorldObject);
 
@@ -188,6 +189,11 @@ std::map<int, Player>& Game::getPlayers()
     return players;
 }
 
+int Game::getCurrentPlayerId()
+{
+    return currentPlayer;
+}
+
 std::map<int, WorldObject>& Game::getWorldObjects()
 {
     return worldObjects;
@@ -264,26 +270,28 @@ bool Game::tryMove(WorldObject& worldObject, double dt)
         worldObject.setPos(pos);
         return false;
     }
-
-    else if (board.isOutOfBounds(newTileIdx))
+    else if (worldObject.canLeaveTile())
     {
-        worldObject.setPos(pos);
-        if (worldObject.canFall())
+        if (board.isOutOfBounds(newTileIdx))
         {
-            worldObject.canTakeInput(false);
-            worldPos vel{ 0.0, 0.0, -10.0 };
-            worldObject.setVelocity(vel);
+            worldObject.setPos(pos);
+            if (worldObject.canFall())
+            {
+                worldObject.canTakeInput(false);
+                worldPos vel{ 0.0, 0.0, -10.0 };
+                worldObject.setVelocity(vel);
+            }
+            return false;
         }
-        return false;
-    }
-    //else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
-    //{
-    //    return false;
-    //}
-    else
-    {
-        worldObject.setPos(pos);
-        return true;
+        //else if (tiles[board.getTileId(newTileIdx)].hasEffect(EffectType::stop))
+        //{
+        //    return false;
+        //}
+        else
+        {
+            worldObject.setPos(pos);
+            return true;
+        }
     }
 }
 
