@@ -16,6 +16,14 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY	https://github.com/g-truc/glm.git
+	GIT_TAG 1.0.1
+)
+
+FetchContent_MakeAvailable(glm)
+
 #add_executable(WizardClient src/WizardClient.cpp src/Tile.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/Board.cpp src/Player.cpp)
 #target_link_libraries(WizardClient
 #    hw_grpc_proto
@@ -36,6 +44,7 @@ target_link_libraries(WizardClient PRIVATE
     SFML::Graphics
     SFML::Network
     glew32
+    glm::glm
 )
 
 add_custom_command(TARGET WizardClient POST_BUILD
