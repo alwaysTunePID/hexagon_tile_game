@@ -4,7 +4,6 @@
 #include "Enums.h"
 #include "ConfigParser.h"
 #include "Game.h"
-#include "Graphics.h"
 #include "PacketFunctions.h"
 
 ///////////////// Global stuff /////////////////////////

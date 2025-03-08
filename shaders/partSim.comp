@@ -1,23 +1,223 @@
-#version 430
+#version 430 core
 
 struct Particle {
+    vec4 pos_n;
     vec4 position;
     vec4 velocity;
+    float lifeTime;
+    float totalLifeTime;
+    float activated;
+    float p3;
 };
+
+layout(local_size_x = 256) in; // Specify the work group size
 
 layout(std430, binding = 0) buffer ParticleBuffer {
     Particle particles[];
 };
 
+layout(rgba32f, binding = 0) uniform image2D prevPosTexture;
+layout(rgba32f, binding = 1) uniform image2D trailTexture;
+layout(rgba32f, binding = 2) uniform image2D psTexture;
+
 uniform float deltaTime;
-uniform vec3 gravity;
+uniform vec2 uResolution; // Window dimensions
+uniform vec2 trailTexRes;
+uniform vec2 trailTexPos;
+uniform vec2 circleOrigin;
+uniform float circleRadius;
+
+// Old rand num creation
+float rand(uint seed) {
+    seed = (seed ^ 61) ^ (seed >> 16);
+    seed *= 9;
+    seed = seed ^ (seed >> 4);
+    seed *= 0x27d4eb2d;
+    seed = seed ^ (seed >> 15);
+    return float(seed) / 4294967295.0; // Normalize to [0,1] 
+}
+
+// New rand num creation
+uint hash(uint seed) {
+    seed ^= 2747636419u;
+    seed *= 2654435769u;
+    seed ^= seed >> 16;
+    seed *= 2654435769u;
+    seed ^= seed >> 16;
+    seed *= 2654435769u;
+    return seed;
+}
+
+float randomSign(float seed) {
+    return (fract(sin(seed * 43758.5453)) < 0.5) ? -1.0 : 1.0;
+}
+
+vec4 followCoord(ivec2 pixelCoords, float velAngle, float signFactor)
+{
+    float radius = 1.0;
+    for (int i = 0; i < 6; i++) {
+        float j_max = float(2 * i + 3);
+        float angle = velAngle - signFactor * (3.141592 / 4.0);
+        float angleInc = signFactor * (3.141592 / 2.0) / (j_max - 1.0);
+        for (int j = 0; j < j_max; j++) {
+            ivec2 searchCoord = pixelCoords + ivec2(round(radius * cos(angle)), round(radius * sin(angle)));
+            vec4 pixelValue = imageLoad(prevPosTexture, searchCoord);
+            if (pixelValue.a > 0.1) {
+                vec2 planeVel = pixelValue.xy * 2.0 - 1.0;
+                planeVel.y *= -1.0; // Flip y
+                return vec4(float(searchCoord.x), float(searchCoord.y), planeVel.x, planeVel.y);
+            }
+            angle += angleInc;
+        }
+        radius += 1.0;
+    }
+    return vec4(float(pixelCoords.x), float(pixelCoords.y), 0.0, 0.0);
+}
+
+float calcDensity(ivec2 pixelCoords)
+{   
+    // Paramters
+    int pixelDim = 5;
+
+    float density = 0.0;
+    float densityInc = 1.0 / float(pixelDim * pixelDim);
+    ivec2 searchCoord = pixelCoords - ivec2((pixelDim - 1) / 2, (pixelDim - 1) / 2);
+    for (int i = 0; i < pixelDim; i++) {    
+        for (int j = 0; j < pixelDim; j++) {
+            vec4 pixelValue = imageLoad(prevPosTexture, searchCoord);
+            if (pixelValue.a > 0.1) {
+                density += densityInc;
+            }
+            searchCoord.y += 1;
+        }
+        searchCoord.x += 1;
+    }
+    return density;
+}
+
+vec4 mixThreeColors(vec4 c1, vec4 c2, vec4 c3, float t) {
+    if (t < 0.5) {
+        return mix(c1, c2, t * 2.0);  // Blend between c1 and c2 for t in [0, 0.5]
+    } else {
+        return mix(c2, c3, (t - 0.5) * 2.0); // Blend between c2 and c3 for t in [0.5, 1.0]
+    }
+}
 
 void main() {
+    // Configure the speed and life time of the particles
+    float speed = 70.0;
+    float meanLifeTime = 1.0;
+
     uint id = gl_GlobalInvocationID.x;
-    
-    // Update velocity with gravity
-    particles[id].velocity.xyz += gravity * deltaTime;
-    
-    // Update position
-    particles[id].position.xyz += particles[id].velocity.xyz * deltaTime;
+
+    vec3 gsPos = particles[id].position.xyz;
+    vec3 gsVel = particles[id].velocity.xyz;
+    ivec2 pixelCoords = ivec2(int(round(gsPos.x - trailTexPos.x)), int(trailTexRes.y - 1.0 - round(gsPos.y - trailTexPos.y)));
+
+    // [0, 2]
+    float randFloat0 = float(hash(id + gl_WorkGroupID.x * 100 + int(deltaTime * 1000.0))) / 2147483647.0;
+    // [0, 1]
+    float randFloat1 = float(hash(id + 723 + gl_WorkGroupID.x * 100 + int(deltaTime * 1000.0))) / 4294967295.0;
+    // [0, 1]
+    float randFloat2 = float(hash(id + 9438 + gl_WorkGroupID.x * 100 + int(deltaTime * 1000.0))) / 4294967295.0;
+    // [0, 2*pi]
+    float randFloat3 = float(hash(id + 26738 + gl_WorkGroupID.x * 100 + int(deltaTime * 1000.0))) / 683565275.42;
+
+    if (particles[id].activated > 0.0)
+    {
+        float velAngle = atan(-gsVel.y, gsVel.x); // Confusing this with y gets flipped all the time
+        float signFactor = (randFloat2 > 0.5) ? -1.0 : 1.0;
+        vec4 followParticle = followCoord(pixelCoords, velAngle, signFactor);
+        ivec2 followCoords = ivec2(followParticle.xy);
+
+        particles[id].velocity.xyz = vec3(0.0, -speed, 0.0); // Upward velocity
+        if (followCoords != pixelCoords) {
+            vec2 dir = vec2(followCoords - pixelCoords);
+            if (length(dir) > 0.0) { //2.0
+                if (dir.y > 0) {
+                    dir = dir * (speed / length(dir));
+                    particles[id].velocity.xyz = vec3(dir.x, -dir.y, 0.0); // Confusing this with y gets flipped all the time
+                }
+            }
+            // You tried here to give the particle the velocity based of the followParticle
+            //else {
+            //    vec2 followVel = followParticle.zw * speed;
+            //    particles[id].velocity.xyz = vec3(followVel, 0.0);
+            //}
+        }
+
+        // To add some randomness to the velocity, change 0.999
+        if (randFloat1 < 0.999) {
+            float angle = (randFloat0 - 1.0) * (3.141592 / 6.0);
+            float c = cos(angle);
+            float s = sin(angle);
+            mat2 rotationMatrix = mat2(c, -s,
+                                       s,  c);
+
+            vec2 velOriginal = particles[id].velocity.xy;
+            particles[id].velocity.xyz = vec3(rotationMatrix * velOriginal, 0.0);
+        }
+
+        particles[id].position.xyz += particles[id].velocity.xyz * deltaTime;
+    }
+    else
+    {  
+        if (randFloat1 < 0.5) {
+            // TEMP: Debugging
+            vec4 pixelValu = vec4(1.0, 0.0, 0.0, 1.0);
+            imageStore(psTexture, ivec2(pixelCoords.x , int(trailTexRes.y - 1.0)), pixelValu);
+            imageStore(psTexture, ivec2(0, pixelCoords.y), pixelValu);
+            return;
+        }
+
+        particles[id].velocity.xyz = vec3(0.0, -speed, 0.0); // Upward velocity
+        particles[id].position.xyz = vec3(circleOrigin.x + circleRadius * randFloat2 * cos(randFloat3),
+                                          circleOrigin.y + circleRadius * randFloat2 * sin(randFloat3),
+                                          0.0);
+         
+        float newLifeTime = meanLifeTime; // + (randFloat2 - 0.5);
+        // If you want more particles just in the spawn area
+        //if (randFloat0 < 1.0) {
+        //    newLifeTime = 0.3;
+        //}
+        particles[id].totalLifeTime = newLifeTime;
+        particles[id].lifeTime = newLifeTime;
+        particles[id].activated = 1.0;
+    }
+
+    // global screen position
+    gsPos = particles[id].position.xyz;
+
+    // Think this can be removed. pos_n is not used any longer.
+    // Convert to this space [-1, 1] which the vertex shader uses. y is flipped for some reason.
+    particles[id].pos_n.xyz = vec3(gsPos.x / uResolution.x * 2.0 - 1.0,
+                                  -gsPos.y / uResolution.y * 2.0 + 1.0,
+                                   0.0);
+
+    // TODO: Is this rounding fine??
+    pixelCoords = ivec2(int(round(gsPos.x - trailTexPos.x)), int(trailTexRes.y - 1.0 - round(gsPos.y - trailTexPos.y)));
+
+    // Color stuff
+    float density = calcDensity(pixelCoords);
+    float colorMixPerc = clamp(density * 2.0, 0.0, 1.0);
+
+    // TODO: Should really just be for activated particles
+    particles[id].lifeTime -= deltaTime * (1.0 - density);
+    // TODO: Change to not use if statement
+    if (particles[id].lifeTime <= 0.0) {
+        particles[id].activated = -1.0;
+    }
+
+    vec4 orange = vec4(0.965, 0.627, 0.227, 1.0);
+    vec4 yellow = vec4(0.988, 0.96, 0.345, 1.0);
+    vec4 white  = vec4(1.0, 1.0, 1.0, 1.0);
+    vec4 pixelValue = mixThreeColors(orange, yellow, white, colorMixPerc);
+
+    // velocity => color
+    vec2 planeVel = particles[id].velocity.xy;
+    planeVel.y *= -1.0; // Flip y
+    vec2 velColor = (planeVel / length(planeVel) + 1.0) / 2.0;
+
+    imageStore(psTexture, pixelCoords, pixelValue);
+    imageStore(trailTexture, pixelCoords, pixelValue); //vec4(velColor, 0.0, 1.0)  vec4(1.0, 1.0, 1.0, 1.0)
 }
