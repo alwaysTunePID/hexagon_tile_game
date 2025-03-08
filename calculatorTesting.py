@@ -49,10 +49,31 @@ vec = np.array([[c1],
 vec2 = np.array([[2*c1],
                  [0.0]])
 
-print(f"From {c1} to {2*c2 - c1}" )
-print(f"Len {2*c2 - 2*c1}" )
+#print(f"From {c1} to {2*c2 - c1}" )
+#print(f"Len {2*c2 - 2*c1}" )
 
 # Calculating the inverse of the matrix
-print(np.linalg.inv(B))
-print(f"x, y: {np.matmul(Binv, vec)}")
-print(f"x, y: {np.matmul(Binv, vec2)}")
+#print(np.linalg.inv(B))
+#print(f"x, y: {np.matmul(Binv, vec)}")
+#print(f"x, y: {np.matmul(Binv, vec2)}")
+
+def followVelocity(pixelCoords, velAngle):
+
+    radius = 1.0
+    for i in range(0, 3):
+        j_max = 2*i+3
+        angle = velAngle - (math.pi/4)
+        angleInc = (math.pi/2) / (j_max - 1)
+        for j in range(0, j_max):
+            coord_x = pixelCoords[0] + round(radius * math.cos(angle))
+            coord_y = pixelCoords[1] + round(radius * math.sin(angle))
+            print(f"({coord_x}, {coord_y}) ")
+            angle += angleInc
+        print(f"---")
+
+        radius += 1.0
+
+
+pixelCoords = [0, 0]
+velAngle = math.pi/4
+followVelocity(pixelCoords, velAngle)

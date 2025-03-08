@@ -321,6 +321,22 @@ void waitForAllPlayersToConnect(sf::IpAddress& serverIp, sf::UdpSocket& socket)
     }
 }
 
+void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, 
+    GLenum severity, GLsizei length, 
+    const GLchar* message, const void* userParam)
+{
+    std::cerr << "GL CALLBACK: " << (type == GL_DEBUG_TYPE_ERROR ? "**GL ERROR**" : "")
+    << " type = " << type
+    << ", severity = " << severity
+    << ", message = " << message << std::endl;
+}
+
+void EnableOpenGLDebug()
+{
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(MessageCallback, 0);
+}
+
 ///////////////// Main /////////////////////////////////
 int main()
 {
@@ -368,6 +384,12 @@ int main()
     sf::RenderWindow window( sf::VideoMode({WIDTH2, HEIGHT2}), "Wizards of Hexagon", sf::Style::Default, sf::State::Windowed, settings );
     window.setFramerateLimit(60);
     window.setVerticalSyncEnabled(true);
+
+    if (glewInit() != GLEW_OK) {
+        std::cout << "ERROR: Failed to initialize GLEW" << std::endl;
+    }
+    glMatrixMode(GL_PROJECTION);
+    EnableOpenGLDebug();
 
     configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
 
