@@ -326,35 +326,40 @@ int main()
 {
     unsigned short port{ 55002 };
     sf::UdpSocket  socket;
-    socket.setBlocking(true);
-
-    // bind the socket to a port
-    for (size_t i{ 0 }; i < 10; i++)
-    {
-        if (socket.bind(port) == sf::Socket::Status::Done) // sf::IpAddress::LocalHost
-            break;
-        if (i == 9)
-            std::cout << "ERROR - Binding sockett" << std::endl;
-        port++;
-    }
-
     sf::IpAddress serverIp{ sf::IpAddress::getPublicAddress().value() };
-    std::string serverIpStr{};
-    if (!DEBUG_LAUNCH) {
-        std::cout << "Enter server IP address:" << std::endl;
-        std::cin >> serverIpStr;
-        auto serverIp_p{ sf::IpAddress::resolve(serverIpStr) };
-        if (serverIp_p) {
-            serverIp = serverIp_p.value();
-        } else {
-            std::cout << "ERROR: Invalid server IP!" << std::endl;
-        }
-    } else {
-        std::cout << "Debug Launch" << std::endl;
-    }
 
-    sendInitMsgToServerAndWaitForResp(serverIp, socket);
-    waitForAllPlayersToConnect(serverIp, socket);
+    // TODO: Temp solution. Should be moved to a function
+    if (!LOCAL_ONLY)
+    {
+        socket.setBlocking(true);
+
+        // bind the socket to a port
+        for (size_t i{ 0 }; i < 10; i++)
+        {
+            if (socket.bind(port) == sf::Socket::Status::Done) // sf::IpAddress::LocalHost
+                break;
+            if (i == 9)
+                std::cout << "ERROR - Binding sockett" << std::endl;
+            port++;
+        }
+        
+        std::string serverIpStr{};
+        if (!DEBUG_LAUNCH) {
+            std::cout << "Enter server IP address:" << std::endl;
+            std::cin >> serverIpStr;
+            auto serverIp_p{ sf::IpAddress::resolve(serverIpStr) };
+            if (serverIp_p) {
+                serverIp = serverIp_p.value();
+            } else {
+                std::cout << "ERROR: Invalid server IP!" << std::endl;
+            }
+        } else {
+            std::cout << "Debug Launch" << std::endl;
+        }
+    
+        sendInitMsgToServerAndWaitForResp(serverIp, socket);
+        waitForAllPlayersToConnect(serverIp, socket);
+    }
 
     sf::ContextSettings settings{ sf::ContextSettings() };
     settings.majorVersion = 4;
@@ -369,8 +374,10 @@ int main()
     Game game{ seed };
     Graphics graphics{ seed };
 
-    //game.createPlayer();
-    //game.createPlayer();
+    if (LOCAL_ONLY) {
+        game.createPlayer(0, "Grimnir");
+        game.createPlayer(1, "Vlad");
+    }
 
     timePoint startTime{ Time::now() };
     timePoint endTime{};
@@ -385,75 +392,90 @@ int main()
 
         getInputs(window, input, dispInput);
 
-        sf::Packet packet;
-        if (sendingActivated)
+        if (LOCAL_ONLY)
         {
-            // Send input to server
-            packet << playerId << input;
-            if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done) {
-                std::cout << "ERROR: Couldn't send package to server" << std::endl;
-            }
-        }
-
-        // Measure client active time
-        clientEndTime = Time::now();
-        timeDuration clientTimePast{ clientEndTime - clientStartTime };
-        //std::cout << "Active time: " << clientTimePast.count() << std::endl;
-
-        // Wait for answer
-        std::optional<sf::IpAddress> sender;
-        unsigned short senderPort;
-        if (socket.receive(packet, sender, senderPort) != sf::Socket::Status::Done) {
-            std::cout << "ERROR: Couldn't receive package to server" << std::endl;
-        }
-        clientStartTime = Time::now();
-
-        //std::cout << "Package size: " << packet.getDataSize() << std::endl;
-
-        if (sender.value() == serverIp)
-        {
-            int8_t packageTypeInt;
-            packet = packet >> packageTypeInt;
-            PackageType packageType = (PackageType)packageTypeInt;
-
-            if (packageType == PackageType::all)
-            {
-                GameStruct serverMsg;
-                if (packet >> serverMsg)
-                {
-                    game.setAllData(serverMsg);
-                    //sendingActivated = false; // Because waiting for second part of message
-                }
-                else
-                {
-                    std::cout << "Error extracting PackageType::all from server!" << std::endl;
-                }
-            }
-            else if (packageType == PackageType::delta)
-            {
-                GameStruct serverMsg;
-                if (packet >> serverMsg)
-                {
-                    game.setDeltaData(serverMsg);
-                }
-                else
-                {
-                    std::cout << "Error extracting PackageType::delta from server!" << std::endl;
-                }
-            }
-            // TODO: Change to SFML time
             endTime = Time::now();
             timeDuration timePast{ endTime - startTime };
             double dt{ timePast.count() };
             startTime = endTime;
 
+            // playerId is always 0 in LOCAL_ONLY mode
+            game.update(input, playerId, dt);
             //moveInput noMove{};
             //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
             //game.update(noInput, 0, dt); // Id has to be known!!!
             graphics.update(game, window, dispInput, playerId, dt);
-
         }
-
+        else
+        {
+            sf::Packet packet;
+            if (sendingActivated)
+            {
+                // Send input to server
+                packet << playerId << input;
+                if (socket.send(packet, serverIp, serverPort) != sf::Socket::Status::Done) {
+                    std::cout << "ERROR: Couldn't send package to server" << std::endl;
+                }
+            }
+    
+            // Measure client active time
+            clientEndTime = Time::now();
+            timeDuration clientTimePast{ clientEndTime - clientStartTime };
+            //std::cout << "Active time: " << clientTimePast.count() << std::endl;
+    
+            // Wait for answer
+            std::optional<sf::IpAddress> sender;
+            unsigned short senderPort;
+            if (socket.receive(packet, sender, senderPort) != sf::Socket::Status::Done) {
+                std::cout << "ERROR: Couldn't receive package to server" << std::endl;
+            }
+            clientStartTime = Time::now();
+    
+            //std::cout << "Package size: " << packet.getDataSize() << std::endl;
+    
+            if (sender.value() == serverIp)
+            {
+                int8_t packageTypeInt;
+                packet = packet >> packageTypeInt;
+                PackageType packageType = (PackageType)packageTypeInt;
+    
+                if (packageType == PackageType::all)
+                {
+                    GameStruct serverMsg;
+                    if (packet >> serverMsg)
+                    {
+                        game.setAllData(serverMsg);
+                        //sendingActivated = false; // Because waiting for second part of message
+                    }
+                    else
+                    {
+                        std::cout << "Error extracting PackageType::all from server!" << std::endl;
+                    }
+                }
+                else if (packageType == PackageType::delta)
+                {
+                    GameStruct serverMsg;
+                    if (packet >> serverMsg)
+                    {
+                        game.setDeltaData(serverMsg);
+                    }
+                    else
+                    {
+                        std::cout << "Error extracting PackageType::delta from server!" << std::endl;
+                    }
+                }
+                // TODO: Change to SFML time
+                endTime = Time::now();
+                timeDuration timePast{ endTime - startTime };
+                double dt{ timePast.count() };
+                startTime = endTime;
+    
+                //moveInput noMove{};
+                //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
+                //game.update(noInput, 0, dt); // Id has to be known!!!
+                graphics.update(game, window, dispInput, playerId, dt);
+            }   
+        }
         //sf::sleep(sf::milliseconds(10));
     }
 }
