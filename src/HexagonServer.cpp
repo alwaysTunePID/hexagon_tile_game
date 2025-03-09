@@ -130,9 +130,12 @@ int main()
     waitForAllClientsToSendInitMsg(game, socket);
     sendToAllClientsThatGameWillBegin(socket);
 
+    // Temp
+    uint8_t soundState{ 0 };
+
     // Temp - To get from lobby to generateLevel
     gameInput input{};
-    game.update(input, 0, 0.0);
+    game.update(input, 0, 0.0, soundState);
 
     timePoint startTime{ Time::now() };
     timePoint endTime{};
@@ -164,7 +167,7 @@ int main()
                     timeDuration timePast{ endTime - startTime };
                     double dt{ timePast.count() };
                     startTime = endTime;
-                    game.update(input, id, dt);
+                    game.update(input, id, dt, soundState);
 
                     sf::Packet packet;
                     if (clientdata.needsAllData)

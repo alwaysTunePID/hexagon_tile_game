@@ -3,6 +3,7 @@
 #include <SFML/System/Time.hpp>
 #include <SFML/Network/UdpSocket.hpp>
 #include <SFML/Network/Packet.hpp>
+#include <SFML/Audio.hpp>
 #include <math.h>
 #include <GL/glew.h>
 #include "Enums.h"
@@ -15,6 +16,7 @@
 bool enableDebugPrint{ false };
 bool showCoordinateSystem{ false };
 bool enableShaders{ false };
+bool playTestSound{ false };
 int  tileSpacingIgnoreCounter{ 0 };
 
 std::string name;
@@ -31,6 +33,8 @@ bool sendingActivated{ true };
 ///////////////// Functions ////////////////////////////
 void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInput)
 {
+    bool xboxEnabled{ false };
+
     float posX{};
     float posY{};
     float posZ{};
@@ -57,7 +61,33 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
     const auto onKeyReleased = [&window, &hasFocus, &input](const sf::Event::KeyReleased& keyReleased)
     {
         if (hasFocus) {
-            if (keyReleased.scancode == sf::Keyboard::Scancode::N)
+
+            if (keyReleased.scancode == sf::Keyboard::Scancode::Enter)
+            {
+                input.button = xbox::A;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::E)
+            {
+                input.button = xbox::B;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::Space)
+            {
+                input.button = xbox::X;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::K)
+            {
+                input.button = xbox::Y;
+                enableDebugPrint = enableDebugPrint ? false : true;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::Tab)
+            {
+                input.button = xbox::LB;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::I)
+            {
+                input.button = xbox::RB;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::N)
                 input.action = actionType::skipTurn;
             else if (keyReleased.scancode == sf::Keyboard::Scancode::C)
             {
@@ -83,6 +113,11 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
             {
                 configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);
                 std::cout << joyThreshHigh << " " << joyThreshLow << std::endl;
+            }
+            else if (keyReleased.scancode == sf::Keyboard::Scancode::P)
+            {
+                std::cout << "Play test sound" << std::endl;
+                playTestSound = true;
             }
         }
     };
@@ -136,10 +171,6 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
         return hasFocus && sf::Keyboard::isKeyPressed(key);
     };
 
-    if (isKeyDown(sf::Keyboard::Scancode::P))
-    {
-        std::cout << "Pressed P " << std::endl;
-    }
     if (isKeyDown(sf::Keyboard::Scancode::LShift) && isKeyDown(sf::Keyboard::Scancode::Z))
     {
         posZ = -160.f;
@@ -183,7 +214,7 @@ void getInputs(sf::RenderWindow& window, gameInput& input, displayInput& dispInp
         posU = 100.f;
     }
 
-    if (xboxConnected)
+    if (xboxConnected && xboxEnabled)
     {
         posX = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X);
         posY = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y);
@@ -384,6 +415,28 @@ int main()
     timePoint clientStartTime{};
     timePoint clientEndTime{};
 
+    // TODO: Temp here
+    sf::SoundBuffer buffer;
+    if (!buffer.loadFromFile("../../../resources/sounds/lightning.wav")) {
+        std::cout << "ERROR: Couldn't load lightning.wav" << std::endl;
+    }
+    sf::Sound sound(buffer);
+
+    // TODO: Temp placement
+    uint8_t soundState{ 0 };
+    sf::SoundBuffer fireSoundBuff;
+    if (!fireSoundBuff.loadFromFile("../../../resources/sounds/fireball.wav")) {
+        std::cout << "ERROR: Couldn't load fireball.wav" << std::endl;
+    }
+    sf::Sound fireballSound(fireSoundBuff);
+
+    sf::Music music;
+    if (!music.openFromFile("../../../resources/music/fantasyForest.ogg")) {
+        std::cout << "ERROR: Couldn't load fantasyForest.ogg" << std::endl;
+    }
+
+    music.play();
+
     while (window.isOpen())
     {
         moveInput move{};
@@ -391,6 +444,12 @@ int main()
         displayInput dispInput{};
 
         getInputs(window, input, dispInput);
+
+        if (playTestSound)
+        {
+            sound.play();
+            playTestSound = false;
+        }
 
         if (LOCAL_ONLY)
         {
@@ -400,7 +459,14 @@ int main()
             startTime = endTime;
 
             // playerId is always 0 in LOCAL_ONLY mode
-            game.update(input, playerId, dt);
+            game.update(input, playerId, dt, soundState);
+
+            // Temp placement
+            if (soundState == 1)
+            {
+                fireballSound.play();
+                soundState = 0;
+            }
             //moveInput noMove{};
             //gameInput noInput{ xbox::none, actionType::none, noMove }; // Temp
             //game.update(noInput, 0, dt); // Id has to be known!!!

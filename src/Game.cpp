@@ -43,7 +43,7 @@ void Game::createPlayer(uint16_t id, std::string name)
     players.insert({id, player});
 }
 
-void Game::update(gameInput input, int playerId, double dt)
+void Game::update(gameInput input, int playerId, double dt, uint8_t& soundState)
 {
     //TODO: Temp hardcoding!
     //playerId = currentPlayer;
@@ -99,7 +99,7 @@ void Game::update(gameInput input, int playerId, double dt)
                 if (playerId == currentPlayer)
                 {
                     player.toggleLJoyMode();
-                    castSpell();
+                    castSpell(soundState);
                 }
             }
             break; 
@@ -369,7 +369,7 @@ int Game::getNewSpellId()
     return returnVal;
 }
 
-void Game::castSpell()
+void Game::castSpell(uint8_t& soundState)
 {
     Player& player{ players[currentPlayer] };
     SpellType spellType{ player.getSelectedSpell() };
@@ -385,6 +385,8 @@ void Game::castSpell()
     fireball.setVelocity(vel);
     fireball.setPos(fireball.getUpdatedPos(0.3));
     addWorldObject(fireball);
+
+    soundState = 1;
 
     // Graphics need to know how to draw player here
     /*

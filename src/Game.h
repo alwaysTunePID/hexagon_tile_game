@@ -53,7 +53,7 @@ public:
     ~Game();
 
     void createPlayer(uint16_t id, std::string name);
-    void update(gameInput input, int playerId, double dt);
+    void update(gameInput input, int playerId, double dt, uint8_t& soundState);
     std::map<int, Tile>& getTiles();
     Tile& getTile(TileIdx tileIdx);
     std::map<int, Player>& getPlayers();
@@ -75,7 +75,7 @@ public:
     void moveToSpawn(Player& player);
     std::vector<castedSpellData>& getCastedSpells();
     int getNewSpellId();
-    void castSpell();
+    void castSpell(uint8_t& soundState);
     void updatePosOfWorldObjects(double dt);
     void updateCastedSpells();
     void executeSpell(castedSpellData& spell);

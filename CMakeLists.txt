@@ -35,6 +35,7 @@ target_compile_features(WizardClient PRIVATE cxx_std_17)
 target_link_libraries(WizardClient PRIVATE
     SFML::Graphics
     SFML::Network
+    SFML::Audio
     glew32
 )
 

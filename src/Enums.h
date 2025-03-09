@@ -10,7 +10,7 @@
 #include <utility>
 
 constexpr bool DEBUG_LAUNCH { true };
-constexpr bool LOCAL_ONLY { false };
+constexpr bool LOCAL_ONLY { true };
 
 #define ROWS 12
 #define COLUMNS 20
