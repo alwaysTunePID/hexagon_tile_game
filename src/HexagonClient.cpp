@@ -380,6 +380,7 @@ int main()
     sf::ContextSettings settings{ sf::ContextSettings() };
     settings.majorVersion = 4;
     settings.minorVersion = 6;
+    settings.depthBits = 24; // 24-bit depth buffer
 
     sf::RenderWindow window( sf::VideoMode({WIDTH2, HEIGHT2}), "Wizards of Hexagon", sf::Style::Default, sf::State::Windowed, settings );
     window.setFramerateLimit(60);
@@ -388,7 +389,9 @@ int main()
     if (glewInit() != GLEW_OK) {
         std::cout << "ERROR: Failed to initialize GLEW" << std::endl;
     }
-    glMatrixMode(GL_PROJECTION);
+
+    // Enable depth test for 3D
+    glEnable(GL_DEPTH_TEST);
     EnableOpenGLDebug();
 
     configParser.loadConfig(joyThreshHigh, joyThreshLow, seed);

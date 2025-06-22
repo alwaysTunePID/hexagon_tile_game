@@ -1,0 +1,66 @@
+#version 430 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+layout(rgba32f, binding = 0) uniform image3D psTexture;
+layout(rgba32f, binding = 1) uniform image3D blurPsTexture;
+
+uniform ivec3 textureRes;
+uniform float deltaTime;
+
+void main() {
+
+    ivec3 coords = ivec3(gl_GlobalInvocationID.xyz);
+    if (coords.x >= textureRes.x || coords.y >= textureRes.y || coords.z >= textureRes.z) return;
+
+    // Configuration parameters
+    int blurDim = 5; // Kernel size (must be odd)
+    float sigma = 1.0; // Standard deviation for Gaussian blur
+
+    int startIdx = -(blurDim - 1) / 2;
+    int endIdx   = (blurDim - 1) / 2;
+
+    vec3 rgbSum = vec3(0.0); // Accumulate RGB values
+    float alphaSum = 0.0;    // Accumulate alpha values
+    float weightSum = 0.0;   // Accumulate weights
+
+    for (int i = startIdx; i <= endIdx; i++) {
+        for (int j = startIdx; j <= endIdx; j++) {
+            for (int k = startIdx; k <= endIdx; k++) {
+                ivec3 searchCoord = coords + ivec3(i, j, k);
+                if (searchCoord.x < 0 || searchCoord.y < 0 || searchCoord.z < 0) continue;
+                if (searchCoord.x >= textureRes.x || searchCoord.y >= textureRes.y || searchCoord.z >= textureRes.z) continue;
+
+                // Compute Gaussian weight
+                float distance2 = float(i * i + j * j + k * k);
+                float weight = exp(-distance2 / (2.0 * sigma * sigma));
+                weight /= (2.0 * 3.14159265 * sigma * sigma); // Normalize Gaussian weight
+                // Temp
+                weight = 1.0; // For testing
+
+                vec4 loadColor = imageLoad(psTexture, searchCoord);
+
+                // Accumulate RGB values weighted by alpha and Gaussian weight
+                rgbSum += loadColor.rgb * loadColor.a * weight;
+
+                // Accumulate alpha values weighted by Gaussian weight
+                alphaSum += loadColor.a * weight;
+
+                // Accumulate total weight
+                weightSum += weight;
+            }
+        }
+    }
+
+    // Temp
+    float alphaConfig = 3.0; // For testing
+
+    // Normalize RGB by accumulated alpha (if alphaSum > 0)
+    vec3 finalRGB = (alphaSum > 0.0) ? rgbSum / alphaSum : vec3(0.0);
+
+    // Normalize alpha by total weight
+    float finalAlpha = (weightSum > 0.0) ? clamp(alphaConfig * alphaSum / weightSum, 0.0, 1.0) : 0.0;
+
+    // Store the final blurred color
+    imageStore(blurPsTexture, coords, vec4(finalRGB, finalAlpha));
+}

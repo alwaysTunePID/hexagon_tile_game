@@ -16,9 +16,12 @@ layout(std430, binding = 0) buffer ParticleBuffer {
     Particle particles[];
 };
 
-layout(rgba32f, binding = 0) uniform image2D prevPosTexture;
-layout(rgba32f, binding = 1) uniform image2D trailTexture;
-layout(rgba32f, binding = 2) uniform image2D psTexture;
+layout(rgba32f, binding = 0) uniform image2D forcesTexture;
+layout(rgba32f, binding = 1) uniform image2D flowFieldTexture; // sampler2D
+layout(rgba32f, binding = 2) uniform image2D prevPosTexture;
+layout(rgba32f, binding = 3) uniform image2D trailTexture;
+layout(rgba32f, binding = 4) uniform image2D psTexture;
+layout(rgba32f, binding = 5) uniform image2D heatTexture;
 
 uniform float deltaTime;
 uniform vec2 uResolution; // Window dimensions
@@ -158,6 +161,28 @@ void main() {
             particles[id].velocity.xyz = vec3(rotationMatrix * velOriginal, 0.0);
         }
 
+        // TEMP: Overwrite the velocity for the flow field value
+        // TODO: Should change to texture() instead, needs sampler2D in the layout as well then
+        //vec2 flowVelocity = texture(flowFieldTexture, particlePos.xy / resolution).xy;
+
+        //// Using flowFieldTexture
+        //vec2 flowVelocity = imageLoad(flowFieldTexture, pixelCoords).xy;
+        //particles[id].velocity.xyz = gsVel + vec3(flowVelocity, 0.0) * deltaTime;
+
+        // Using forcesTexture
+        vec2 forcesVelocity = imageLoad(forcesTexture, pixelCoords).xy;
+        forcesVelocity.y *= -1.0; // Flip y
+        vec3 velDelta = vec3(0.0, -speed * deltaTime, 0.0);
+        if (abs(forcesVelocity.x) > 0.001 || abs(forcesVelocity.y) > 0.001) {
+            velDelta = vec3(forcesVelocity, 0.0) * speed * 5.0 * deltaTime;
+        }
+
+        vec3 newVel = gsVel + velDelta;
+        newVel = normalize(newVel) * speed;
+
+        particles[id].velocity.xyz = newVel;
+
+
         particles[id].position.xyz += particles[id].velocity.xyz * deltaTime;
     }
     else
@@ -218,6 +243,13 @@ void main() {
     planeVel.y *= -1.0; // Flip y
     vec2 velColor = (planeVel / length(planeVel) + 1.0) / 2.0;
 
+    // Lifetime => heat => alpha
+    vec4 heatValue = vec4(0.0, 1.0, 0.0, 0.0);
+    if (particles[id].activated > 0.0) {
+        heatValue.a = particles[id].lifeTime / meanLifeTime;
+    }
+    
+    imageStore(heatTexture, pixelCoords, heatValue);
     imageStore(psTexture, pixelCoords, pixelValue);
     imageStore(trailTexture, pixelCoords, pixelValue); //vec4(velColor, 0.0, 1.0)  vec4(1.0, 1.0, 1.0, 1.0)
 }
