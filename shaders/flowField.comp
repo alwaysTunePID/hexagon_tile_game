@@ -1,0 +1,150 @@
+#version 430 core
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// Flow field texture (read-write)
+layout(rgba32f, binding = 0) uniform image2D prevFlowField;
+layout(rgba32f, binding = 1) uniform image2D flowField;
+
+// Fire heat source texture (optional, for buoyancy)
+//layout(r32f, binding = 1) uniform sampler2D heatSource;
+
+// Simulation parameters
+uniform float deltaTime;
+uniform float buoyancyStrength;
+uniform float damping;
+uniform vec2 trailTexRes;
+uniform vec2 trailTexPos;
+uniform vec2 circleOrigin;
+uniform float circleRadius;
+
+void main() {
+    ivec2 uv = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 texSize = imageSize(prevFlowField);
+
+    if (uv.x >= texSize.x || uv.y >= texSize.y) return;
+
+    vec2 velocity = vec2(0.0);
+
+    // Sample heat source (fire intensity)
+    //kfloat heat = texture(heatSource, uv / vec2(texSize)).r;
+
+    // uv == pixelCoords, I believe
+    // So you need to calculate uv into gsPos to see if you are within the circle
+    vec2 gsPos = vec2(float(uv.x) + trailTexPos.x, - float(uv.y) + trailTexPos.y + trailTexRes.y - 1.0);
+
+    float heat = 0.0;
+    if (length(gsPos - circleOrigin) < circleRadius)
+    {
+        heat = 1.0;
+
+        // Read previous velocity
+        velocity = imageLoad(prevFlowField, uv).xy;
+
+        // Apply buoyancy effect (heat makes air rise)
+        velocity.y += heat * buoyancyStrength * deltaTime;
+
+        // Add some damping to prevent infinite acceleration
+        velocity *= damping;
+
+        velocity = clamp(velocity, -1.0, 1.0);
+    }
+    else
+    {
+        //float numIterations = 0.0;
+        //for (int i = -2; i <= 2; i++) {
+        //    for (int j = -7; j <= 2; j++) {
+        //        velocity += imageLoad(prevFlowField, uv + ivec2(i, j)).xy;
+        //        numIterations += 1.0;
+        //    }
+        //}
+        //velocity /= (numIterations * 1.05); // Don't understand the need for this *1.1...
+
+        velocity = imageLoad(prevFlowField, uv).xy;
+        float velocityBellow = imageLoad(prevFlowField, uv + ivec2(0, -1)).y;
+        velocity.y += velocityBellow * 0.5;
+
+        // neighbour pixel - this pixel 
+        //vec2 posDiff[5] = vec2[](vec2(-1, 0), vec2(-1, 1), vec2(0, 1), vec2(1, 1), vec2(1, 0));
+        vec2 posDiff[2] = vec2[](vec2(-1, 0), vec2(1, 0));
+
+        vec2 velPull = vec2(0.0);
+        float maxLenNeighbour = 0.0;
+        float dirFactor = 0.0;
+        for (int i = 0; i < 2; i++) {
+            vec2 velNeighbour = imageLoad(prevFlowField, uv + ivec2(posDiff[i])).xy;
+            float lenNeighbour = length(velNeighbour);
+            vec2 normVelNeighbour = (1.0 / length(velNeighbour)) * velNeighbour;
+            vec2 normPosDiff = (1.0 / length(posDiff[i])) * posDiff[i];
+            float dotProd = dot(normVelNeighbour, normPosDiff);
+            dirFactor = 1.0;
+            // Colliding if dotProd < 0.0
+            if (dotProd < 0.0) {
+                dirFactor = -1.0;
+            }
+            if (lenNeighbour > maxLenNeighbour) {
+                maxLenNeighbour = lenNeighbour;
+            }
+            velPull += (lenNeighbour / length(posDiff[i])) * dirFactor * posDiff[i];
+        }
+        //if (length(velPull) > maxLenNeighbour) {
+        //    velPull = (maxLenNeighbour / length(velPull)) * velPull; // * 0.5
+        //}
+
+        velocity += velPull;
+
+        //velocity.x = abs(velocity.x);
+
+        // x^2 - p + y^2 = z^2 - p = 1
+        // p = z^2 - 1
+        // sqrt(x^2 + 1 - z^2)
+
+        velocity.x = clamp(velocity.x, -maxLenNeighbour * 0.9, maxLenNeighbour * 0.9);
+        velocity.y = clamp(velocity.y, -1.0, velocityBellow * 0.97);
+        float normDiff = 1.0 - length(velocity) * length(velocity);
+        if (normDiff < 0.0) {
+            velocity.x  = sign(velocity.x) * sqrt(velocity.x * velocity.x + normDiff);
+        }
+
+        /*velocity = imageLoad(prevFlowField, uv).xy;
+
+        vec2 posDiff[3] = vec2[](vec2(-1, 0), vec2(1, 0), vec2(0, -1));
+        vec2 velPull = vec2(0.0);
+        float maxLenNeighbour = 0.0;
+        float dirFactor = 0.0;
+
+        for (int i = 0; i < 3; i++) {
+            vec2 velNeighbour = imageLoad(prevFlowField, uv + ivec2(posDiff[i])).xy;
+            float lenNeighbour = clamp(length(velNeighbour), 0.0, 0.999);
+            if (lenNeighbour > maxLenNeighbour) {
+                maxLenNeighbour = lenNeighbour;
+            }
+            float dotProd = dot(velNeighbour, posDiff[i]);
+            // Colliding if dotProd < 0.0
+            dirFactor = (dotProd < 0.0) ? -1.0 : 1.0;
+            if (lenNeighbour > 0.001) {
+                velPull += 0.33 * lenNeighbour * dirFactor * posDiff[i];
+            }
+        }
+
+        velocity += velPull;
+        if (length(velocity) > 1.0) {
+            velocity = normalize(velocity);
+        }
+        if (length(velocity) > maxLenNeighbour && maxLenNeighbour > 0.001) {
+            float maxLen = (maxLenNeighbour / length(velocity));
+            velocity = maxLen * vec2(0.9, 0.97) * velocity;
+        }*/
+        
+    }
+
+    // Temp
+    float blueVal = 0.0;
+    if (velocity.x < 0.0)
+    {
+        blueVal = abs(velocity.x);
+    }
+
+    // Store updated velocity
+    imageStore(flowField, uv, vec4(velocity, blueVal, 1.0));
+}

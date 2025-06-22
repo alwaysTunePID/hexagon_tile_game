@@ -37,7 +37,7 @@ FetchContent_MakeAvailable(glm)
 #target_compile_features(WizardClient PRIVATE cxx_std_17)
 
 link_directories(${CMAKE_SOURCE_DIR}/libraries/lib)
-add_executable(WizardClient src/HexagonClient.cpp src/PacketFunctions.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Graphics.cpp src/Game.cpp src/Tilesprite.cpp src/WorldObjectSprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
+add_executable(WizardClient src/HexagonClient.cpp src/PacketFunctions.cpp src/ConfigParser.cpp src/Tile.cpp src/WorldObject.cpp src/Graphics.cpp src/ParticleSystem.cpp src/Game.cpp src/Tilesprite.cpp src/WorldObjectSprite.cpp src/Board.cpp src/Player.cpp src/Fire.cpp)
 target_include_directories(WizardClient PRIVATE ${CMAKE_SOURCE_DIR}/libraries/include)
 target_compile_features(WizardClient PRIVATE cxx_std_17)
 target_link_libraries(WizardClient PRIVATE

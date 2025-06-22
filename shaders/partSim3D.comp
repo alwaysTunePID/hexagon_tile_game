@@ -1,0 +1,291 @@
+#version 430 core
+
+struct Particle {
+    vec4 pos_n;
+    vec4 position;
+    vec4 velocity;
+    float lifeTime;
+    float totalLifeTime;
+    int activated;
+    float p3;
+};
+
+layout(local_size_x = 256) in; // Specify the work group size
+
+layout(std430, binding = 0) buffer ParticleBuffer {
+    Particle particles[];
+};
+
+layout(rgba32f, binding = 0) uniform image3D flowFieldTexture;
+layout(rgba32f, binding = 1) uniform image3D prevPosTexture;
+layout(rgba32f, binding = 2) uniform image3D psTexture;
+
+
+uniform float deltaTime;
+uniform float time;
+uniform vec2 uResolution; // Window dimensions
+uniform ivec3 textureRes;
+uniform int isInitState;
+
+float PI = 3.14159265;
+
+// New rand num creation
+uint hash(uint seed) {
+    seed ^= 2747636419u;
+    seed *= 2654435769u;
+    seed ^= seed >> 16;
+    seed *= 2654435769u;
+    seed ^= seed >> 16;
+    seed *= 2654435769u;
+    return seed;
+}
+
+// 2D Simplex Noise (GLSL)
+// Author: Ian McEwan, Ashima Arts (public domain)
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec3 permute(vec3 x) { return mod289((x * 34.0 + 1.0) * x); }
+
+float simplexNoise(vec2 v)
+{
+    const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+                        0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+                        -0.577350269189626, // -1.0 + 2.0 * C.x
+                        0.024390243902439); // 1.0 / 41.0
+
+    // First corner
+    vec2 i  = floor(v + dot(v, C.yy));
+    vec2 x0 = v - i + dot(i, C.xx);
+
+    // Other corners
+    vec2 i1;
+    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+    vec2 x1 = x0.xy - i1 + C.xx;
+    vec2 x2 = x0.xy - 1.0 + 2.0 * C.xx;
+
+    // Permutations
+    i = mod289(i);
+    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0))
+                   + i.x + vec3(0.0, i1.x, 1.0));
+
+    // Gradients
+    vec3 x_ = fract(p * C.w) * 2.0 - 1.0;
+    vec3 h = abs(x_) - 0.5;
+    vec3 ox = floor(x_ + 0.5);
+    vec3 a0 = x_ - ox;
+
+    // Compute final noise value
+    vec2 g0 = vec2(a0.x, h.x);
+    vec2 g1 = vec2(a0.y, h.y);
+    vec2 g2 = vec2(a0.z, h.z);
+
+    float t0 = 0.5 - dot(x0, x0);
+    float t1 = 0.5 - dot(x1, x1);
+    float t2 = 0.5 - dot(x2, x2);
+
+    float n0 = t0 < 0.0 ? 0.0 : pow(t0, 4.0) * dot(g0, x0);
+    float n1 = t1 < 0.0 ? 0.0 : pow(t1, 4.0) * dot(g1, x1);
+    float n2 = t2 < 0.0 ? 0.0 : pow(t2, 4.0) * dot(g2, x2);
+
+    return 70.0 * (n0 + n1 + n2);
+}
+
+// Begin here. Just add another loop. Treat it as a square area that increases the further away it is
+ivec3 followCoord(ivec3 pixelCoords, vec2 velAngles)
+{
+    // theta: [0, pi], phi: [0, 2*pi]
+    float radius  = 1.0;
+    int phiSign   = 1;
+    int thetaSign = 1;
+    float velTheta = velAngles.x;
+    float velPhi   = velAngles.y;
+    for (int i = 0; i < 12; i++) {
+        float j_max = float(2 * i + 2);
+        float angleInc = (i == 0) ? 0 : atan(i,i+1) / i;
+        float deltaPhi = 0.0;
+        for (int j = 0; j < j_max; j++) {
+            float deltaTheta = 0.0;
+            for (int k = 0; k < j_max; k++) {
+                float phi   = velPhi   + phiSign * deltaPhi;
+                float theta = velTheta + thetaSign * deltaTheta;
+                ivec3 spherePos = ivec3(
+                    radius * sin(theta) * cos(phi),
+                    radius * sin(theta) * sin(phi),
+                    radius * cos(theta)
+                );
+                ivec3 searchCoord = pixelCoords + spherePos;
+                vec4 pixelValue = imageLoad(prevPosTexture, searchCoord);
+                if (pixelValue.a > 0.1) {
+                    return searchCoord;
+                }
+                thetaSign *= -1;
+                if (thetaSign > 0)
+                    deltaTheta += angleInc;
+            }
+            phiSign *= -1;
+            if (phiSign > 0)
+                deltaPhi += angleInc;
+        }
+        radius += 1.0;
+    }
+    return pixelCoords;
+}
+
+vec4 mixThreeColors(vec4 c1, vec4 c2, vec4 c3, float t) {
+    if (t < 0.5) {
+        return mix(c1, c2, t * 2.0);  // Blend between c1 and c2 for t in [0, 0.5]
+    } else {
+        return mix(c2, c3, (t - 0.5) * 2.0); // Blend between c2 and c3 for t in [0.5, 1.0]
+    }
+}
+
+void main() {
+
+    float speed = 0.6 * textureRes.x;
+    float initSpeed = 0.5 * speed;
+    float meanLifeTime = 2.0;
+
+    uint id = gl_GlobalInvocationID.x;
+    uint timeSeed = uint(time * 1000.0);
+
+    float r = 0.25 * float(textureRes.x);
+    vec3 center = vec3(textureRes) * vec3(0.5, 0.25, 0.5);
+
+    // [0, 1]
+    float willSpawn = float(hash(id + timeSeed)) / 4294967295.0;
+    // [0, 2*pi]
+    //float phi = float(hash(id * 2 + timeSeed + 13)) * 2.0 / 1367130550.83;
+    // [0, pi]
+    //float theta = float(hash(id * 3 + timeSeed + 27)) / 1367130550.83;
+    // [0, 255]
+    float randFloat3 = float(hash(id + timeSeed + 45)) / 16843009.0;
+    // [0, 1]
+    float willVelOffset = float(hash(id * 4 + timeSeed)) / 4294967295.0;
+
+    if (isInitState == 1 || particles[id].activated == 0)
+    {
+        //if (willSpawn < 0.95)
+        //    return;
+
+        /*vec3 spherePos = vec3(
+            r * sin(theta) * cos(phi),
+            r * sin(theta) * sin(phi),
+            r * cos(theta)
+        );*/
+
+        vec3 spherePos = vec3(
+            float(hash(id * 5 + timeSeed)) / 4294967295.0 - 0.5,
+            float(hash(id * 6 + timeSeed)) / 4294967295.0 - 0.5,
+            float(hash(id * 7 + timeSeed)) / 4294967295.0 - 0.5
+        );
+        vec3 sphereNorm = normalize(spherePos);
+        spherePos = sphereNorm * r;
+
+        float theta = acos(sphereNorm.z);                 // [0, pi]
+        float phi   = atan(sphereNorm.y, sphereNorm.x);   // [0, 2*pi]
+        vec2  uv    = vec2(theta / PI, phi / (2.0 * PI)); // [0,1] range
+
+        float scale = 5.0; // Scale for noise
+        float noiseVal = simplexNoise((uv + time * 0.05) * scale); // [-1, 1]
+
+        // noiseVal *= sin(time * 0.05);
+
+        float noiseSpawn = 0.2; // float(hash(id * 8 + timeSeed)) / 4294967295.0;
+        if (noiseSpawn > noiseVal) // smoothstep(0.2, 0.8, (noiseVal + 1.0) * 0.5)
+            return;
+
+        particles[id].position.xyz = vec3(
+            center.x + spherePos.x,
+            center.y + spherePos.y,
+            center.z + spherePos.z
+        );
+
+        particles[id].velocity.xyz = sphereNorm * initSpeed;
+
+        float newLifeTime = meanLifeTime; 
+        particles[id].totalLifeTime = newLifeTime;
+        particles[id].lifeTime = newLifeTime;
+        particles[id].activated = 1;
+    }
+    else
+    {
+        vec3 gsPos = particles[id].position.xyz;
+        vec3 gsVel = particles[id].velocity.xyz;
+
+        vec4 pixelValue = imageLoad(flowFieldTexture, ivec3(gsPos));
+        if (pixelValue.a > 0.01) {
+            particles[id].velocity.xyz = 0.90 * particles[id].velocity.xyz + 0.10 * pixelValue.xyz * speed;
+        }
+        
+
+        // Follow particles code
+        /*
+        ivec3 pixelCoords = ivec3(round(gsPos));
+        // theta, phi
+        vec2 velAngles = vec2(0.0);
+        if (length(gsVel) > 0.0) {
+            velAngles = vec2(
+                acos(gsVel.z / length(gsVel)),
+                atan(gsVel.y, gsVel.x)
+            );
+        }
+        ivec3 followCoords = followCoord(pixelCoords, velAngles);
+
+        particles[id].velocity.xyz = 0.94 * particles[id].velocity.xyz + 0.06 * vec3(0.0, 1.0, 0.0) * speed; // Gravity 
+        if (followCoords != pixelCoords) {
+            vec3 dir = vec3(followCoords - pixelCoords);
+            if (length(dir) > 0.0) { //2.0
+                if (dir.y > 0) {
+                    dir = dir * (speed / length(dir));
+                    particles[id].velocity.xyz = dir;
+                }
+            }
+        }
+        else {
+            if (willVelOffset > 0.9) {
+                gsVel = particles[id].velocity.xyz;
+                if (length(gsVel) > 0.0) {
+                    velAngles = vec2(
+                        acos(gsVel.z / length(gsVel)),
+                        atan(gsVel.y, gsVel.x)
+                    );
+                }
+
+                particles[id].velocity.xyz = vec3(
+                    speed * sin(velAngles.x + 0.1 * (theta - 3.14/2.0)) * cos(velAngles.y + 0.1 * (phi - 3.14)),
+                    speed * sin(velAngles.x + 0.1 * (theta - 3.14/2.0)) * sin(velAngles.y + 0.1 * (phi - 3.14)),
+                    speed * cos(velAngles.x + 0.1 * (theta - 3.14/2.0))
+                );
+            }
+        }*/
+
+        particles[id].position.xyz += particles[id].velocity.xyz * deltaTime;
+
+        particles[id].lifeTime -= deltaTime;
+        // TODO: Change to not use if statement
+        if (particles[id].lifeTime <= 0.0) {
+            particles[id].activated = 0;
+            return;
+        }
+    }
+
+    ivec3 pixelCoords = ivec3(round(particles[id].position.xyz));
+    if (pixelCoords.x >= textureRes.x || pixelCoords.y >= textureRes.y || pixelCoords.z >= textureRes.z) {
+        particles[id].activated = 0;
+        return;
+    }
+
+    vec4 orange1 = vec4(0.965, 0.627, 0.227, 0.5);
+    vec4 yellow  = vec4(0.988, 0.96, 0.52, 0.8);
+    vec4 orange2 = vec4(0.965, 0.627, 0.227, 0.1);
+
+    vec4 white1 = vec4(1.0, 1.0, 1.0, 1.0);
+    vec4 white2 = vec4(1.0, 1.0, 1.0, 1.0);
+    vec4 white3 = vec4(1.0, 1.0, 1.0, 0.7);
+    float colorMixPerc = 1.0 - particles[id].lifeTime / particles[id].totalLifeTime;
+    //vec4 pixelValue = mixThreeColors(orange1, yellow, orange2, colorMixPerc);
+    vec4 pixelValue = mixThreeColors(white1, white2, white3, colorMixPerc);
+    pixelValue = vec4(1.0, 1.0, 1.0, 0.02);
+
+    imageStore(psTexture, pixelCoords, pixelValue);
+}

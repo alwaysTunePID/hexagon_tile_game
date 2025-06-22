@@ -9,17 +9,7 @@
 #include "Tile.h"
 #include "Tilesprite.h"
 #include "WorldObjectSprite.h"
-
-// Configure number of particles in the system
-const int NUM_PARTICLES = 10*256; // Needs to be even work group size
-
-// Particle data structure
-struct Particle {
-    float x_n, y_n, z_n, w_n; // Position [-1, 1] + padding
-    float x, y, z, w;         // Simulation local position + padding
-    float vx, vy, vz, vw;     // Simulation local Velocity + padding
-    float lifeTime, totalLifeTime, activated, p3;
-};
+#include "ParticleSystem.h"
 
 class Graphics
 {
@@ -37,21 +27,7 @@ private:
     float m_timePastForShader;
     worldPos m_globalLightVec;
     std::default_random_engine generator;
-    bool particleSimOngoing;
-    GLuint particleBuffer;
-    GLuint fadeProgram;
-    GLuint computeProgram;
-    GLuint renderProgram;
-    GLuint vao;
-    GLuint prevPosTexture;
-    GLuint trailTexture;
-    GLuint psTexture;
-    GLuint quadVAO;
-    GLuint quadVBO;
-    sf::Vector2f trailTextureRes;
-    sf::Vector2f trailTexturePos;
-    sf::Vector2f cOrigin;
-    sf::CircleShape circle;
+    ParticleSystem particleSystem;
 
 public:
     Graphics(unsigned seed);
@@ -72,18 +48,7 @@ public:
     std::vector<woCosmetic>* getTileCosmetics(Tile& tile);
     void updateGlobalLightVec(double timePast);
     void updateGlobalLightVec2(double timePast);
-    //void createParticleSimulation();
-    void InitQuad();
-    void InitParticles();
     void updateAndDrawParticleSimulation(sf::RenderWindow& window, displayInput& input, double dt);
-    // Temp here
-    void FadeParticleTrail(float deltaTime);
-    void UpdateParticles(float deltaTime);
-    void RenderParticles();
-    // Shader loading utility
-    GLuint LoadShader(const std::string& filePath, GLenum type);
-    GLuint CreateComputeShader(const std::string& filePath);
-    GLuint CreateProgram(GLuint vertexShader, GLuint fragmentShader);
 };
 
 #endif

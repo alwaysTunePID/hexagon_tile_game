@@ -1,0 +1,47 @@
+#version 430 core
+
+struct Swirl {
+    vec2 pos;
+    float radius;
+    float omega;
+    float lifeTime;
+    float activated;
+};
+
+layout(local_size_x = 16, local_size_y = 16) in; // Specify the work group size
+
+layout(std430, binding = 0) buffer SwirlBuffer {
+    Swirl swirls[];
+};
+
+layout(rgba32f, binding = 0) uniform image2D forcesTexture;
+
+uniform float deltaTime;
+
+void main() {
+    ivec2 pixelPos = ivec2(gl_GlobalInvocationID.xy);
+    //vec2 uv = vec2(pixelPos) + 0.5; // Centering on pixel
+
+    // Loop through all swirls
+    //vec4 blendedColor = vec4(0.0);
+    vec2 vel = vec2(0.0);
+    int numContributions = 0;
+    for (int i = 0; i < swirls.length(); i++) {
+        vec2 posDiff = vec2(pixelPos) - swirls[i].pos;
+        float dist = length(posDiff);
+        if (dist < swirls[i].radius) {
+            numContributions += 1;
+            float velTangent = dist * 0.1; // swirls[i].omega;
+            // Quota of the triangles are the same. dist and velTangent are the hypotenuses
+            vel += vec2(-(posDiff.y / dist) * velTangent , (posDiff.x / dist) * velTangent);
+            
+            // ... calculations...
+            //blendedColor = mix(blendedColor, newColor, 0.5); // Blending
+        }
+    }
+    //if (numContributions > 0) {
+    //    vel = (vel + 1.0) / 2.0;
+    //}
+    
+    imageStore(forcesTexture, pixelPos, vec4(vel, 0.0, 1.0));
+}

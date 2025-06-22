@@ -1,0 +1,78 @@
+#version 430 core
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
+
+// Flow field texture (read-write)
+layout(rgba32f, binding = 0) uniform image3D colorTexture;
+
+uniform ivec3 textureRes;
+uniform float deltaTime;
+
+
+
+void main() {
+
+    ivec3 coords = ivec3(gl_GlobalInvocationID.xyz);
+    if (coords.x >= textureRes.x || coords.y >= textureRes.y || coords.z >= textureRes.z) return;
+
+    // Configuration parameters
+    float maxLenFromSphere = 60.0;
+    float maxLenFromSphere2 = 100.0;
+    vec3 flameTip = vec3(float(textureRes.x) * 0.5, float(textureRes.y) * 0.95, float(textureRes.z) * 0.5);
+    float r = 0.25 * float(textureRes.x);
+    vec3 center = vec3(textureRes) * vec3(0.5, 0.25, 0.5);
+    float r_sq = r * r;
+
+    vec4 color = vec4(0.0);
+
+    vec3 d = vec3(coords) - center;
+    vec3 d_sq = d * d;
+
+    if (d_sq.x + d_sq.y + d_sq.z < r_sq) {
+        color = vec4(0.0, 0.0, 0.0, 1.0); // Set to black if inside the sphere
+        imageStore(colorTexture, coords, color);
+        return;
+    }
+
+    float lenFromSphere = length(d) - r;
+    // TODO: Add check inside cone. d_sq.x + d_sq.z < r_sq && 
+    if (coords.y > center.y && coords.y < flameTip.y) {
+        vec3 toTipVel = normalize(flameTip - vec3(coords));
+        color = vec4(toTipVel, 1.0); // alpha should be scaled
+        imageStore(colorTexture, coords, color);
+        return;
+    }
+    if (coords.y < center.y && lenFromSphere < maxLenFromSphere) {
+        vec3 up = vec3(0.0, 1.0, 0.0);
+        vec3 N = normalize(d);              // Normal at point on sphere
+        vec3 tangent = up - dot(up, N) * N; // Projected onto tangent plane
+        vec3 unitTangent = normalize(tangent);
+
+        color = vec4(unitTangent, (maxLenFromSphere - lenFromSphere) / maxLenFromSphere);
+        imageStore(colorTexture, coords, color);
+        return;
+    }
+
+    /*
+    float lenFromSphere = length(d) - r;
+    if (d_sq.x + d_sq.z < r_sq && coords.y > center.y) {
+        maxLenFromSphere = maxLenFromSphere2;
+    }
+    if (lenFromSphere < maxLenFromSphere) {
+        color = vec4(0.0, 1.0, 0.0, (maxLenFromSphere - lenFromSphere) / maxLenFromSphere);
+        imageStore(colorTexture, coords, color);
+        return;
+    }
+    else if (lenFromSphere < maxLenFromSphere2 && coords.y > center.y) {
+        vec2 suctionVel = normalize(vec2(-d.x, -d.z));
+        color = vec4(suctionVel.x, 0.0, suctionVel.y, (maxLenFromSphere2 - lenFromSphere) / maxLenFromSphere2);
+        imageStore(colorTexture, coords, color);
+        return;
+    }
+    else if (lenFromSphere < maxLenFromSphere2) {
+        vec3 suctionVel = normalize(-d);
+        color = vec4(suctionVel, (maxLenFromSphere2 - lenFromSphere) / maxLenFromSphere2);
+        imageStore(colorTexture, coords, color);
+        return;
+    }*/
+}
